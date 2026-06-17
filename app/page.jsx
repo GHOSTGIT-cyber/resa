@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [pw, setPw] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -141,13 +142,24 @@ export default function Dashboard() {
             Entrez le mot de passe pour afficher nom, téléphone et e-mail des clients.
           </p>
           <form className="row" onSubmit={login}>
-            <input
-              type="password"
-              value={pw}
-              onChange={(e) => setPw(e.target.value)}
-              placeholder="Mot de passe"
-              autoComplete="current-password"
-            />
+            <span className="pw-field">
+              <input
+                type={showPw ? "text" : "password"}
+                value={pw}
+                onChange={(e) => setPw(e.target.value)}
+                placeholder="Mot de passe"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="pw-eye"
+                onClick={() => setShowPw((v) => !v)}
+                aria-label={showPw ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                title={showPw ? "Masquer" : "Afficher"}
+              >
+                {showPw ? "🙈" : "👁️"}
+              </button>
+            </span>
             <button className="btn" type="submit" disabled={loading}>
               {loading ? "…" : "Afficher"}
             </button>
