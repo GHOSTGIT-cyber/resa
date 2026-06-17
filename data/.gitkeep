@@ -1,0 +1,2 @@
+# Les réservations sont stockées ici (reservations.json), ignoré par git.
+# En production Coolify : monter un VOLUME PERSISTANT sur /app/data.

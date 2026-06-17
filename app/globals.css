@@ -1,0 +1,31 @@
+:root{
+  --ink:#0F2830; --orange:#F4631F; --bg:#F4F6F8; --card:#fff;
+  --line:#e3e7ef; --muted:#6b7787; --green:#2f9d6a;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:1100px;margin:0 auto;padding:24px 18px 64px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+header.top h1{font-size:1.4rem;margin:0}
+.badge{background:var(--ink);color:#fff;border-radius:999px;padding:4px 12px;font-size:.8rem}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
+@media(min-width:760px){.cards{grid-template-columns:repeat(4,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card .num{font-size:2rem;font-weight:800;color:var(--orange);line-height:1}
+.card .lbl{color:var(--muted);font-size:.85rem;margin-top:6px}
+.section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:18px}
+.section h2{font-size:1rem;margin:0 0 12px}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+th{background:var(--ink);color:#fff;position:sticky;top:0}
+tr:nth-child(even) td{background:#f8f9fc}
+.pill{display:inline-block;background:#eef2f7;border-radius:999px;padding:2px 9px;font-size:.8rem;margin:2px}
+.btn{display:inline-flex;align-items:center;gap:6px;background:var(--orange);color:#fff;border:0;border-radius:999px;padding:10px 18px;font-weight:700;cursor:pointer;text-decoration:none;font-size:.95rem}
+.btn.secondary{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type=password]{padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:1rem;min-width:220px}
+.muted{color:var(--muted)}
+.lock{background:#fff7f2;border:1px dashed var(--orange);border-radius:14px;padding:18px}
+.err{color:#d94d4d;font-size:.9rem;margin-top:8px}
+.scroll{overflow:auto;max-height:62vh;border:1px solid var(--line);border-radius:12px}
+.refresh{font-size:.8rem;color:var(--muted)}
