@@ -27,6 +27,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState("list"); // "list" | "day"
   const [copied, setCopied] = useState("");
+  const [flash, setFlash] = useState("");
+  const [busy, setBusy] = useState("");
 
   const load = useCallback(async () => {
     const r = await fetch("/api/reservations", { cache: "no-store" });
@@ -69,6 +71,34 @@ export default function Dashboard() {
       body: JSON.stringify({ ref, status }),
     });
     load();
+  }
+
+  function flashMsg(m) {
+    setFlash(m);
+    setTimeout(() => setFlash(""), 5000);
+  }
+
+  // Confirme la réservation ET envoie le mail de validation au client.
+  async function confirmAndNotify(r) {
+    if (!r.email) {
+      if (!window.confirm("Pas d'e-mail client. Confirmer quand même (sans envoi) ?")) return;
+    }
+    setBusy(r.ref);
+    try {
+      const res = await fetch("/api/reservations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ref: r.ref, status: "confirmed", notify: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const e = data?.emailed;
+      if (e?.ok) flashMsg(`✅ E-mail de validation envoyé à ${r.email}`);
+      else if (e && e.ok === false) flashMsg(`⚠️ Confirmé, mais e-mail NON envoyé : ${e.error || "erreur"}`);
+      else flashMsg("Réservation confirmée.");
+    } finally {
+      setBusy("");
+      load();
+    }
   }
 
   // Suppression en 2 temps : on ne supprime QUE si déjà annulée, et avec confirmation.
@@ -150,8 +180,21 @@ export default function Dashboard() {
 
             <div className="rcard-actions">
               {r.status !== "confirmed" && !cancelled && (
-                <button className="mini ok" onClick={() => setStatus(r.ref, "confirmed")}>
-                  Confirmer
+                <button
+                  className="mini ok"
+                  disabled={busy === r.ref}
+                  onClick={() => confirmAndNotify(r)}
+                >
+                  {busy === r.ref ? "…" : "✅ Confirmer + e-mail"}
+                </button>
+              )}
+              {r.status === "confirmed" && !cancelled && (
+                <button
+                  className="mini"
+                  disabled={busy === r.ref}
+                  onClick={() => confirmAndNotify(r)}
+                >
+                  {busy === r.ref ? "…" : "✉️ Renvoyer l'e-mail"}
                 </button>
               )}
               {!cancelled && (
@@ -235,6 +278,8 @@ export default function Dashboard() {
             <span className="refresh">Actualisé toutes les 30 s</span>
           </div>
         </div>
+
+        {flash && <div className="flash">{flash}</div>}
 
         {rows.length === 0 ? (
           <p className="muted" style={{ marginTop: 12 }}>

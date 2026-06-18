@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { readAll, add, remove, setStatus, stats, STATUSES } from "../../../lib/store";
 import { COOKIE, isAuthed } from "../../../lib/auth";
-import { notify } from "../../../lib/notify";
+import { notify, sendConfirmation } from "../../../lib/notify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -114,7 +114,15 @@ export async function PATCH(request) {
     return NextResponse.json({ ok: false, error: "paramètres invalides" }, { status: 400 });
   }
   const ok = setStatus(ref, status);
-  return NextResponse.json({ ok }, { status: ok ? 200 : 404 });
+
+  // Option : envoyer le mail de validation au client (bouton "Confirmer + e-mail").
+  let emailed = null;
+  if (ok && body.notify) {
+    const r = readAll().find((x) => x.ref === ref);
+    if (r) emailed = await sendConfirmation(r);
+  }
+
+  return NextResponse.json({ ok, emailed }, { status: ok ? 200 : 404 });
 }
 
 // ---- DELETE : suppression DÉFINITIVE (authentifié) ----

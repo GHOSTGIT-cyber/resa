@@ -73,3 +73,7 @@ tr:nth-child(even) td{background:#f8f9fc}
 .rcard-msg{background:#f4f6f8;border-radius:10px;padding:10px;font-size:.9rem;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
 .rcard-recu{color:var(--muted);font-size:.78rem}
 .rcard-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.mini:disabled{opacity:.5;cursor:default}
+
+/* Bandeau de retour (envoi e-mail) */
+.flash{margin:12px 0 0;padding:10px 14px;border-radius:10px;background:#e7f6ee;border:1px solid #bfe6cf;color:#1c6b46;font-size:.9rem}
