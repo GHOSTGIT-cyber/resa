@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { readAll, add, stats } from "../../../lib/store";
+import { readAll, add, remove, setStatus, stats, STATUSES } from "../../../lib/store";
 import { COOKIE, isAuthed } from "../../../lib/auth";
+import { notify } from "../../../lib/notify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,15 +13,19 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+function authed() {
+  return isAuthed(cookies().get(COOKIE)?.value);
+}
+
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS });
 }
 
 // ---- GET : alimente le dashboard ----
-// Public  : stats + réservations SANS données perso (date, créneau, participants, formule)
+// Public  : stats + réservations SANS données perso (date, créneau, participants, formule, statut)
 // Authentifié (cookie) : + nom, téléphone, e-mail, message
 export async function GET() {
-  const authed = isAuthed(cookies().get(COOKIE)?.value);
+  const isAuth = authed();
   const all = readAll().sort((a, b) => (a.date + a.slot).localeCompare(b.date + b.slot));
   const list = all.map((r) => {
     const base = {
@@ -30,14 +35,15 @@ export async function GET() {
       participants: r.participants,
       formule: r.formule,
       level: r.level,
+      status: r.status || "pending",
       createdAt: r.createdAt,
     };
-    if (authed) {
+    if (isAuth) {
       return { ...base, name: r.name, phone: r.phone, email: r.email, message: r.message };
     }
     return base;
   });
-  return NextResponse.json({ authed, stats: stats(all), reservations: list });
+  return NextResponse.json({ authed: isAuth, stats: stats(all), reservations: list });
 }
 
 // ---- POST : enregistre une réservation (appelé par le formulaire du site) ----
@@ -76,12 +82,13 @@ export async function POST(request) {
     participants: Math.max(1, Math.min(8, parseInt(body.participants, 10) || 1)),
     level: String(body.level || "").slice(0, 40),
     message: String(body.message || "").slice(0, 1000),
+    status: "pending",
     createdAt: new Date().toISOString(),
   };
   add(reservation);
 
-  // notification serveur OPTIONNELLE (WhatsApp via CallMeBot) si variables d'env définies
-  await notifyWhatsApp(reservation).catch(() => {});
+  // notifications serveur (WhatsApp + e-mail) — n'échouent jamais la requête
+  await notify(reservation).catch(() => {});
 
   return new NextResponse(JSON.stringify({ ok: true, ref: reservation.ref }), {
     status: 201,
@@ -89,16 +96,37 @@ export async function POST(request) {
   });
 }
 
-async function notifyWhatsApp(r) {
-  const phone = process.env.WHATSAPP_PHONE;
-  const apikey = process.env.WHATSAPP_APIKEY;
-  if (!phone || !apikey) return; // désactivé tant que non configuré
-  const text =
-    `Nouvelle réservation eFoil\n` +
-    `Réf : ${r.ref}\nNom : ${r.name}\nTél : ${r.phone}\n` +
-    `Formule : ${r.formule}\nDate : ${r.date} ${r.slot}\nParticipants : ${r.participants}`;
-  const url =
-    `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(phone)}` +
-    `&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(apikey)}`;
-  await fetch(url);
+// ---- PATCH : change le statut d'une réservation (authentifié) ----
+// body { ref, status }  status ∈ pending | confirmed | cancelled
+export async function PATCH(request) {
+  if (!authed()) {
+    return NextResponse.json({ ok: false, error: "non autorisé" }, { status: 401 });
+  }
+  let body = {};
+  try {
+    body = await request.json();
+  } catch {
+    body = {};
+  }
+  const ref = String(body.ref || "");
+  const status = String(body.status || "");
+  if (!ref || !STATUSES.includes(status)) {
+    return NextResponse.json({ ok: false, error: "paramètres invalides" }, { status: 400 });
+  }
+  const ok = setStatus(ref, status);
+  return NextResponse.json({ ok }, { status: ok ? 200 : 404 });
+}
+
+// ---- DELETE : suppression DÉFINITIVE (authentifié) ----
+// ?ref=...  — n'est exposé par l'UI qu'après annulation préalable.
+export async function DELETE(request) {
+  if (!authed()) {
+    return NextResponse.json({ ok: false, error: "non autorisé" }, { status: 401 });
+  }
+  const ref = new URL(request.url).searchParams.get("ref");
+  if (!ref) {
+    return NextResponse.json({ ok: false, error: "ref manquante" }, { status: 400 });
+  }
+  const ok = remove(ref);
+  return NextResponse.json({ ok }, { status: ok ? 200 : 404 });
 }
