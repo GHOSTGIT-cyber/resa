@@ -36,6 +36,7 @@ tr:nth-child(even) td{background:#f8f9fc}
 .st{display:inline-block;border-radius:999px;padding:2px 9px;font-size:.75rem;font-weight:700;white-space:nowrap}
 .st-pending{background:#fff3e0;color:#b25b00}
 .st-confirmed{background:#e7f6ee;color:var(--green)}
+.st-proposed{background:#eef0ff;color:#4a4ec2}
 .st-cancelled{background:#f3e3e3;color:#b23b3b}
 
 /* Petits boutons d'action */
@@ -77,3 +78,14 @@ tr:nth-child(even) td{background:#f8f9fc}
 
 /* Bandeau de retour (envoi e-mail) */
 .flash{margin:12px 0 0;padding:10px 14px;border-radius:10px;background:#e7f6ee;border:1px solid #bfe6cf;color:#1c6b46;font-size:.9rem}
+
+/* Créneau proposé (sur la carte) */
+.rcard-prop{background:#eef0ff;border:1px solid #d6d9fb;border-radius:10px;padding:8px 10px;font-size:.9rem;color:#3b3fae}
+
+/* Modal "proposer un créneau" */
+.modal-bg{position:fixed;inset:0;background:rgba(15,40,48,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal{background:#fff;border-radius:14px;padding:18px;width:100%;max-width:460px;max-height:90vh;overflow:auto}
+.modal label{display:block;font-size:.85rem;color:var(--muted);margin:12px 0 4px;font-weight:600}
+.modal input,.modal textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:1rem;font-family:inherit}
+.tpl-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}

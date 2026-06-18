@@ -1,7 +1,19 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 
-const STATUS_LABEL = { pending: "En attente", confirmed: "Confirmée", cancelled: "Annulée" };
+const STATUS_LABEL = {
+  pending: "En attente",
+  confirmed: "Confirmée",
+  proposed: "Créneau proposé",
+  cancelled: "Annulée",
+};
+
+// Messages pré-écrits pour la proposition d'un autre créneau.
+const TEMPLATES = [
+  "Le créneau demandé n'est plus disponible, nous vous proposons ce qui suit.",
+  "La météo / l'état de la mer est défavorable ce jour-là, voici un report possible.",
+  "Pour mieux vous accueillir, nous vous proposons un autre horaire.",
+];
 
 // "2026-06-21" -> "21/06/2026"
 function fmtDate(d) {
@@ -29,6 +41,11 @@ export default function Dashboard() {
   const [copied, setCopied] = useState("");
   const [flash, setFlash] = useState("");
   const [busy, setBusy] = useState("");
+  // Modal "proposer un autre créneau"
+  const [proposeFor, setProposeFor] = useState(null);
+  const [propDate, setPropDate] = useState("");
+  const [propSlot, setPropSlot] = useState("");
+  const [propMsg, setPropMsg] = useState("");
 
   const load = useCallback(async () => {
     const r = await fetch("/api/reservations", { cache: "no-store" });
@@ -101,6 +118,40 @@ export default function Dashboard() {
     }
   }
 
+  function openPropose(r) {
+    setProposeFor(r);
+    setPropDate("");
+    setPropSlot("");
+    setPropMsg("");
+  }
+
+  // Propose un autre créneau au client (statut "Créneau proposé" + e-mail).
+  async function submitProposal() {
+    const r = proposeFor;
+    if (!r || !propDate || !propSlot) return;
+    setBusy(r.ref);
+    try {
+      const res = await fetch("/api/reservations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ref: r.ref,
+          status: "proposed",
+          proposal: { date: propDate, slot: propSlot, message: propMsg },
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const e = data?.emailed;
+      if (e?.ok) flashMsg(`📅 Proposition envoyée à ${r.email}`);
+      else if (e && e.ok === false) flashMsg(`⚠️ Enregistré, mais e-mail NON envoyé : ${e.error || "erreur"}`);
+      else flashMsg("Proposition enregistrée.");
+      setProposeFor(null);
+    } finally {
+      setBusy("");
+      load();
+    }
+  }
+
   // Suppression en 2 temps : on ne supprime QUE si déjà annulée, et avec confirmation.
   async function hardDelete(r) {
     const ok = window.confirm(
@@ -164,6 +215,12 @@ export default function Dashboard() {
           {r.level && <span>· {r.level}</span>}
         </div>
 
+        {r.status === "proposed" && r.proposedDate && (
+          <div className="rcard-prop">
+            📅 Proposé : <strong>{fmtDate(r.proposedDate)}</strong> · {r.proposedSlot}
+          </div>
+        )}
+
         {authed && (
           <>
             <div className="rcard-name">{r.name || "—"}</div>
@@ -195,6 +252,11 @@ export default function Dashboard() {
                   onClick={() => confirmAndNotify(r)}
                 >
                   {busy === r.ref ? "…" : "✉️ Renvoyer l'e-mail"}
+                </button>
+              )}
+              {!cancelled && (
+                <button className="mini" onClick={() => openPropose(r)}>
+                  📅 Proposer un créneau
                 </button>
               )}
               {!cancelled && (
@@ -352,6 +414,62 @@ export default function Dashboard() {
             </button>
           </form>
           {err && <div className="err">{err}</div>}
+        </div>
+      )}
+
+      {proposeFor && (
+        <div className="modal-bg" onClick={() => setProposeFor(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 2px" }}>Proposer un autre créneau</h3>
+            <p className="muted" style={{ marginTop: 0 }}>
+              À {proposeFor.name || "ce client"}
+              {proposeFor.email ? ` · ${proposeFor.email}` : " · (pas d'e-mail)"}
+            </p>
+
+            <label>Nouvelle date</label>
+            <input type="date" value={propDate} onChange={(e) => setPropDate(e.target.value)} />
+
+            <label>Heure / créneau</label>
+            <input
+              type="text"
+              placeholder="ex. 10:00"
+              value={propSlot}
+              onChange={(e) => setPropSlot(e.target.value)}
+            />
+
+            <label>Message au client</label>
+            <div className="tpl-row">
+              {TEMPLATES.map((t, i) => (
+                <button key={i} type="button" className="mini" onClick={() => setPropMsg(t)}>
+                  Modèle {i + 1}
+                </button>
+              ))}
+            </div>
+            <textarea
+              rows={4}
+              value={propMsg}
+              onChange={(e) => setPropMsg(e.target.value)}
+              placeholder="Votre message (ou choisissez un modèle ci-dessus)"
+            />
+
+            <div className="modal-actions">
+              <button className="btn secondary" onClick={() => setProposeFor(null)}>
+                Annuler
+              </button>
+              <button
+                className="btn"
+                disabled={!proposeFor.email || !propDate || !propSlot || busy === proposeFor.ref}
+                onClick={submitProposal}
+              >
+                {busy === proposeFor.ref ? "…" : "Envoyer la proposition"}
+              </button>
+            </div>
+            {!proposeFor.email && (
+              <p className="err" style={{ marginTop: 8 }}>
+                Pas d'e-mail client : impossible d'envoyer la proposition.
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>

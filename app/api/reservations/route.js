@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { readAll, add, remove, setStatus, stats, STATUSES } from "../../../lib/store";
+import { readAll, add, remove, setStatus, update, stats, STATUSES } from "../../../lib/store";
 import { COOKIE, isAuthed } from "../../../lib/auth";
-import { notify, sendConfirmation } from "../../../lib/notify";
+import { notify, sendConfirmation, sendProposal } from "../../../lib/notify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +36,8 @@ export async function GET() {
       formule: r.formule,
       level: r.level,
       status: r.status || "pending",
+      proposedDate: r.proposedDate || "",
+      proposedSlot: r.proposedSlot || "",
       createdAt: r.createdAt,
     };
     if (isAuth) {
@@ -115,9 +117,17 @@ export async function PATCH(request) {
   }
   const ok = setStatus(ref, status);
 
-  // Option : envoyer le mail de validation au client (bouton "Confirmer + e-mail").
   let emailed = null;
-  if (ok && body.notify) {
+  if (ok && body.proposal) {
+    // Proposition d'un autre créneau : on stocke le créneau proposé + on envoie le mail.
+    update(ref, {
+      proposedDate: String(body.proposal.date || ""),
+      proposedSlot: String(body.proposal.slot || ""),
+    });
+    const r = readAll().find((x) => x.ref === ref);
+    if (r) emailed = await sendProposal(r, body.proposal);
+  } else if (ok && body.notify && status === "confirmed") {
+    // Validation : on envoie le mail de confirmation au client.
     const r = readAll().find((x) => x.ref === ref);
     if (r) emailed = await sendConfirmation(r);
   }
