@@ -3,6 +3,13 @@ import { useEffect, useState, useCallback } from "react";
 
 const STATUS_LABEL = { pending: "En attente", confirmed: "Confirmée", cancelled: "Annulée" };
 
+// "2026-06-21" -> "21 06 2026"
+function fmtDate(d) {
+  if (!d) return "—";
+  const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]} ${m[2]} ${m[1]}` : d;
+}
+
 function fmtReceived(iso) {
   if (!iso) return "—";
   try {
@@ -116,7 +123,7 @@ export default function Dashboard() {
       <div className={"rcard" + (cancelled ? " rcard-cancel" : "")}>
         <div className="rcard-top">
           <div className="rcard-when">
-            <strong>{r.date}</strong> · {r.slot}
+            <strong>{fmtDate(r.date)}</strong> · {r.slot}
           </div>
           <StatusBadge s={r.status} />
         </div>
@@ -249,7 +256,7 @@ export default function Dashboard() {
               return (
                 <div key={d} className="dayblock">
                   <div className="dayhead">
-                    <strong>{d}</strong>
+                    <strong>{fmtDate(d)}</strong>
                     <span className="muted">
                       {dayRows.length} résa · {total} pers.
                     </span>
