@@ -37,17 +37,13 @@ tr:nth-child(even) td{background:#f8f9fc}
 .st-pending{background:#fff3e0;color:#b25b00}
 .st-confirmed{background:#e7f6ee;color:var(--green)}
 .st-cancelled{background:#f3e3e3;color:#b23b3b}
-tr.rowcancel td{opacity:.55}
 
 /* Petits boutons d'action */
-.mini{border:1px solid var(--line);background:#fff;border-radius:8px;padding:3px 8px;font-size:.78rem;cursor:pointer;font-weight:600;white-space:nowrap}
+.mini{border:1px solid var(--line);background:#fff;border-radius:8px;padding:4px 9px;font-size:.78rem;cursor:pointer;font-weight:600;white-space:nowrap}
 .mini:hover{border-color:#c7cedb}
 .mini.ok{border-color:var(--green);color:var(--green)}
 .mini.warn{border-color:#d9962f;color:#b25b00}
 .mini.danger{border-color:#d94d4d;color:#d94d4d}
-td.actions{display:flex;gap:6px;flex-wrap:wrap}
-.copywrap{display:inline-flex;align-items:center;gap:6px}
-.msgcell{max-width:240px;white-space:normal}
 
 /* Bascule de vue Liste / Par jour */
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
@@ -55,5 +51,23 @@ td.actions{display:flex;gap:6px;flex-wrap:wrap}
 .seg button.on{background:var(--ink);color:#fff}
 
 /* Vue par jour */
-.dayblock{margin-bottom:16px}
-.dayhead{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 4px;font-size:1rem}
+.dayblock{margin-bottom:18px}
+.dayhead{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 2px;font-size:1rem}
+
+/* Réservations en CARTES — pensé mobile : un client visible d'un coup, aucun scroll latéral */
+.rgrid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
+@media(min-width:720px){.rgrid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1040px){.rgrid{grid-template-columns:repeat(3,1fr)}}
+.rcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.rcard-cancel{opacity:.6}
+.rcard-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.rcard-when{font-size:1.02rem}
+.rcard-meta{color:var(--muted);font-size:.9rem;display:flex;flex-wrap:wrap;gap:5px}
+.rcard-name{font-weight:800;font-size:1.05rem;margin-top:2px}
+.rcard-line{display:flex;align-items:center;gap:8px;font-size:.92rem;min-width:0}
+.rcard-line .k{color:var(--muted);min-width:48px;flex-shrink:0}
+.copywrap{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.cval{word-break:break-all}
+.rcard-msg{background:#f4f6f8;border-radius:10px;padding:10px;font-size:.9rem;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+.rcard-recu{color:var(--muted);font-size:.78rem}
+.rcard-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}

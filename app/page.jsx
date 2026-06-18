@@ -66,11 +66,6 @@ export default function Dashboard() {
 
   // Suppression en 2 temps : on ne supprime QUE si déjà annulée, et avec confirmation.
   async function hardDelete(r) {
-    if (r.status !== "cancelled") {
-      // 1er temps : annuler (réversible, on garde toutes les infos client)
-      return setStatus(r.ref, "cancelled");
-    }
-    // 2e temps : suppression définitive, confirmée explicitement
     const ok = window.confirm(
       `Supprimer DÉFINITIVEMENT la réservation de ${r.name || r.ref} ?\n` +
         `Cette action est irréversible et efface les coordonnées du client.`
@@ -97,17 +92,16 @@ export default function Dashboard() {
   const slots = Object.entries(stats.bySlot || {}).sort();
   // Public : on masque les annulées. Connecté : on voit tout (annulées grisées).
   const rows = authed ? reservations : reservations.filter((r) => r.status !== "cancelled");
-  const colCount = authed ? 12 : 6;
 
   function StatusBadge({ s }) {
     return <span className={"st st-" + s}>{STATUS_LABEL[s] || s}</span>;
   }
 
-  function CopyBtn({ text, tag }) {
-    if (!text) return <>—</>;
+  function CopyVal({ text, tag }) {
+    if (!text) return <span className="muted">—</span>;
     return (
       <span className="copywrap">
-        {text}
+        <span className="cval">{text}</span>
         <button className="mini" title="Copier" onClick={() => copy(text, tag)}>
           {copied === tag ? "✓" : "⧉"}
         </button>
@@ -115,81 +109,63 @@ export default function Dashboard() {
     );
   }
 
-  function Row({ r }) {
+  // Une carte = un client, entièrement visible (pensé mobile, aucun scroll latéral).
+  function Card({ r }) {
     const cancelled = r.status === "cancelled";
     return (
-      <tr className={cancelled ? "rowcancel" : ""}>
-        <td>{r.date}</td>
-        <td>{r.slot}</td>
-        <td>{r.participants}</td>
-        <td>{r.formule}</td>
-        <td>{r.level}</td>
-        <td><StatusBadge s={r.status} /></td>
-        {authed && <td>{r.name}</td>}
-        {authed && <td><CopyBtn text={r.phone} tag={"p" + r.ref} /></td>}
-        {authed && <td><CopyBtn text={r.email} tag={"e" + r.ref} /></td>}
-        {authed && <td className="msgcell">{r.message || "—"}</td>}
-        {authed && <td>{fmtReceived(r.createdAt)}</td>}
-        {authed && (
-          <td className="actions">
-            {r.status !== "confirmed" && !cancelled && (
-              <button className="mini ok" onClick={() => setStatus(r.ref, "confirmed")}>
-                Confirmer
-              </button>
-            )}
-            {!cancelled && (
-              <button className="mini warn" onClick={() => setStatus(r.ref, "cancelled")}>
-                Annuler
-              </button>
-            )}
-            {cancelled && (
-              <button className="mini" onClick={() => setStatus(r.ref, "pending")}>
-                Réactiver
-              </button>
-            )}
-            {cancelled && (
-              <button className="mini danger" onClick={() => hardDelete(r)}>
-                🗑 Supprimer
-              </button>
-            )}
-          </td>
-        )}
-      </tr>
-    );
-  }
+      <div className={"rcard" + (cancelled ? " rcard-cancel" : "")}>
+        <div className="rcard-top">
+          <div className="rcard-when">
+            <strong>{r.date}</strong> · {r.slot}
+          </div>
+          <StatusBadge s={r.status} />
+        </div>
 
-  function Table({ list }) {
-    return (
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Créneau</th>
-            <th>Pers.</th>
-            <th>Formule</th>
-            <th>Niveau</th>
-            <th>Statut</th>
-            {authed && <th>Nom</th>}
-            {authed && <th>Téléphone</th>}
-            {authed && <th>E-mail</th>}
-            {authed && <th>Message</th>}
-            {authed && <th>Reçu le</th>}
-            {authed && <th>Actions</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {list.length === 0 && (
-            <tr>
-              <td colSpan={colCount} className="muted">
-                Aucune réservation.
-              </td>
-            </tr>
-          )}
-          {list.map((r, i) => (
-            <Row key={r.ref + i} r={r} />
-          ))}
-        </tbody>
-      </table>
+        <div className="rcard-meta">
+          <span>{r.participants} pers.</span>
+          {r.formule && <span>· {r.formule}</span>}
+          {r.level && <span>· {r.level}</span>}
+        </div>
+
+        {authed && (
+          <>
+            <div className="rcard-name">{r.name || "—"}</div>
+            <div className="rcard-line">
+              <span className="k">Tél</span>
+              <CopyVal text={r.phone} tag={"p" + r.ref} />
+            </div>
+            <div className="rcard-line">
+              <span className="k">E-mail</span>
+              <CopyVal text={r.email} tag={"e" + r.ref} />
+            </div>
+            {r.message && <div className="rcard-msg">{r.message}</div>}
+            <div className="rcard-recu">Reçu le {fmtReceived(r.createdAt)}</div>
+
+            <div className="rcard-actions">
+              {r.status !== "confirmed" && !cancelled && (
+                <button className="mini ok" onClick={() => setStatus(r.ref, "confirmed")}>
+                  Confirmer
+                </button>
+              )}
+              {!cancelled && (
+                <button className="mini warn" onClick={() => setStatus(r.ref, "cancelled")}>
+                  Annuler
+                </button>
+              )}
+              {cancelled && (
+                <button className="mini" onClick={() => setStatus(r.ref, "pending")}>
+                  Réactiver
+                </button>
+              )}
+              {cancelled && (
+                <button className="mini danger" onClick={() => hardDelete(r)}>
+                  🗑 Supprimer
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     );
   }
 
@@ -242,10 +218,7 @@ export default function Dashboard() {
           <h2 style={{ margin: 0 }}>Réservations</h2>
           <div className="row">
             <div className="seg">
-              <button
-                className={view === "list" ? "on" : ""}
-                onClick={() => setView("list")}
-              >
+              <button className={view === "list" ? "on" : ""} onClick={() => setView("list")}>
                 Liste
               </button>
               <button className={view === "day" ? "on" : ""} onClick={() => setView("day")}>
@@ -256,13 +229,18 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {view === "list" ? (
-          <div className="scroll" style={{ marginTop: 12 }}>
-            <Table list={rows} />
+        {rows.length === 0 ? (
+          <p className="muted" style={{ marginTop: 12 }}>
+            Aucune réservation.
+          </p>
+        ) : view === "list" ? (
+          <div className="rgrid">
+            {rows.map((r, i) => (
+              <Card key={r.ref + i} r={r} />
+            ))}
           </div>
         ) : (
-          <div style={{ marginTop: 12 }}>
-            {days.length === 0 && <p className="muted">Aucune réservation.</p>}
+          <div>
             {days.map((d) => {
               const dayRows = byDay[d];
               const total = dayRows
@@ -276,8 +254,10 @@ export default function Dashboard() {
                       {dayRows.length} résa · {total} pers.
                     </span>
                   </div>
-                  <div className="scroll">
-                    <Table list={dayRows} />
+                  <div className="rgrid">
+                    {dayRows.map((r, i) => (
+                      <Card key={r.ref + i} r={r} />
+                    ))}
                   </div>
                 </div>
               );
