@@ -3,11 +3,11 @@ import { useEffect, useState, useCallback } from "react";
 
 const STATUS_LABEL = { pending: "En attente", confirmed: "Confirmée", cancelled: "Annulée" };
 
-// "2026-06-21" -> "21 06 2026"
+// "2026-06-21" -> "21/06/2026"
 function fmtDate(d) {
   if (!d) return "—";
   const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return m ? `${m[3]} ${m[2]} ${m[1]}` : d;
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
 }
 
 function fmtReceived(iso) {
