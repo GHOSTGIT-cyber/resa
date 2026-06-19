@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { readAll, add, remove, setStatus, update, stats, STATUSES } from "../../../lib/store";
 import { COOKIE, isAuthed } from "../../../lib/auth";
-import { notify, sendConfirmation, sendProposal } from "../../../lib/notify";
+import { notify, sendConfirmation, sendProposal, sendCancellation } from "../../../lib/notify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -130,6 +130,10 @@ export async function PATCH(request) {
     // Validation : on envoie le mail de confirmation au client.
     const r = readAll().find((x) => x.ref === ref);
     if (r) emailed = await sendConfirmation(r);
+  } else if (ok && body.notify && status === "cancelled") {
+    // Annulation : on envoie le mail d'annulation au client.
+    const r = readAll().find((x) => x.ref === ref);
+    if (r) emailed = await sendCancellation(r);
   }
 
   return NextResponse.json({ ok, emailed }, { status: ok ? 200 : 404 });

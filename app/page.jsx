@@ -41,6 +41,8 @@ export default function Dashboard() {
   const [copied, setCopied] = useState("");
   const [flash, setFlash] = useState("");
   const [busy, setBusy] = useState("");
+  // Modal "annuler" (avec ou sans mail)
+  const [cancelFor, setCancelFor] = useState(null);
   // Modal "proposer un autre créneau"
   const [proposeFor, setProposeFor] = useState(null);
   const [propDate, setPropDate] = useState("");
@@ -112,6 +114,27 @@ export default function Dashboard() {
       if (e?.ok) flashMsg(`✅ E-mail de validation envoyé à ${r.email}`);
       else if (e && e.ok === false) flashMsg(`⚠️ Confirmé, mais e-mail NON envoyé : ${e.error || "erreur"}`);
       else flashMsg("Réservation confirmée.");
+    } finally {
+      setBusy("");
+      load();
+    }
+  }
+
+  // Annule la réservation, avec ou sans mail au client.
+  async function doCancel(r, withMail) {
+    setCancelFor(null);
+    setBusy(r.ref);
+    try {
+      const res = await fetch("/api/reservations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ref: r.ref, status: "cancelled", notify: withMail }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const e = data?.emailed;
+      if (withMail && e?.ok) flashMsg(`Réservation annulée — mail envoyé à ${r.email}`);
+      else if (withMail && e && e.ok === false) flashMsg(`Annulée, mais e-mail NON envoyé : ${e.error || "erreur"}`);
+      else flashMsg("Réservation annulée (sans mail).");
     } finally {
       setBusy("");
       load();
@@ -260,7 +283,7 @@ export default function Dashboard() {
                 </button>
               )}
               {!cancelled && (
-                <button className="mini warn" onClick={() => setStatus(r.ref, "cancelled")}>
+                <button className="mini warn" onClick={() => setCancelFor(r)}>
                   Annuler
                 </button>
               )}
@@ -414,6 +437,39 @@ export default function Dashboard() {
             </button>
           </form>
           {err && <div className="err">{err}</div>}
+        </div>
+      )}
+
+      {cancelFor && (
+        <div className="modal-bg" onClick={() => setCancelFor(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 4px" }}>Annuler la réservation</h3>
+            <p className="muted" style={{ marginTop: 0 }}>
+              {cancelFor.name || cancelFor.ref}
+              {cancelFor.email ? ` · ${cancelFor.email}` : " · (pas d'e-mail)"}
+            </p>
+            <div className="modal-actions" style={{ flexDirection: "column", alignItems: "stretch" }}>
+              {cancelFor.email && (
+                <button
+                  className="btn"
+                  disabled={busy === cancelFor.ref}
+                  onClick={() => doCancel(cancelFor, true)}
+                >
+                  Annuler + envoyer le mail
+                </button>
+              )}
+              <button
+                className="btn secondary"
+                disabled={busy === cancelFor.ref}
+                onClick={() => doCancel(cancelFor, false)}
+              >
+                Annuler sans mail
+              </button>
+              <button className="mini" onClick={() => setCancelFor(null)}>
+                Retour
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
