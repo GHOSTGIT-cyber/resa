@@ -38,6 +38,7 @@ export async function GET() {
       status: r.status || "pending",
       proposedDate: r.proposedDate || "",
       proposedSlot: r.proposedSlot || "",
+      siteId: r.siteId || "",
       createdAt: r.createdAt,
     };
     if (isAuth) {
@@ -45,7 +46,12 @@ export async function GET() {
     }
     return base;
   });
-  return NextResponse.json({ authed: isAuth, stats: stats(all), reservations: list });
+  return NextResponse.json({
+    authed: isAuth,
+    brand: process.env.BRAND_NAME || "eFoil Côte d'Azur",
+    stats: stats(all),
+    reservations: list,
+  });
 }
 
 // ---- POST : enregistre une réservation (appelé par le formulaire du site) ----
@@ -85,6 +91,7 @@ export async function POST(request) {
     level: String(body.level || "").slice(0, 40),
     message: String(body.message || "").slice(0, 1000),
     status: "pending",
+    siteId: process.env.SITE_ID || "cotedazur", // marque (pour fusion future des dashboards)
     createdAt: new Date().toISOString(),
   };
   add(reservation);

@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Réservations — eFoil Côte d'Azur",
+  title: "Réservations eFoil",
   robots: { index: false, follow: false },
 };
 

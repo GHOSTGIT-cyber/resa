@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState("list"); // "list" | "day"
+  const [period, setPeriod] = useState("upcoming"); // "upcoming" | "past" | "all"
   const [copied, setCopied] = useState("");
   const [flash, setFlash] = useState("");
   const [busy, setBusy] = useState("");
@@ -199,10 +200,23 @@ export default function Dashboard() {
 
   if (!data) return <div className="wrap">Chargement…</div>;
 
-  const { authed, stats, reservations } = data;
+  const { authed, brand, stats, reservations } = data;
   const slots = Object.entries(stats.bySlot || {}).sort();
   // Public : on masque les annulées. Connecté : on voit tout (annulées grisées).
   const rows = authed ? reservations : reservations.filter((r) => r.status !== "cancelled");
+
+  // Filtre période : à venir (défaut) / passées / toutes (comparaison de dates AAAA-MM-JJ).
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+    now.getDate()
+  ).padStart(2, "0")}`;
+  const inPeriod = (r) =>
+    period === "all"
+      ? true
+      : period === "past"
+      ? r.date && r.date < todayStr
+      : !r.date || r.date >= todayStr;
+  const shown = rows.filter(inPeriod);
 
   function StatusBadge({ s }) {
     return <span className={"st st-" + s}>{STATUS_LABEL[s] || s}</span>;
@@ -306,13 +320,13 @@ export default function Dashboard() {
 
   // Regroupement par date pour la vue "Par jour".
   const byDay = {};
-  for (const r of rows) (byDay[r.date || "—"] ||= []).push(r);
+  for (const r of shown) (byDay[r.date || "—"] ||= []).push(r);
   const days = Object.keys(byDay).sort();
 
   return (
     <div className="wrap">
       <header className="top">
-        <h1>Réservations — eFoil Côte d'Azur</h1>
+        <h1>Réservations — {brand || "eFoil"}</h1>
         <span className="badge">{authed ? "Accès complet" : "Vue publique"}</span>
       </header>
 
@@ -353,6 +367,20 @@ export default function Dashboard() {
           <h2 style={{ margin: 0 }}>Réservations</h2>
           <div className="row">
             <div className="seg">
+              <button
+                className={period === "upcoming" ? "on" : ""}
+                onClick={() => setPeriod("upcoming")}
+              >
+                À venir
+              </button>
+              <button className={period === "past" ? "on" : ""} onClick={() => setPeriod("past")}>
+                Passées
+              </button>
+              <button className={period === "all" ? "on" : ""} onClick={() => setPeriod("all")}>
+                Toutes
+              </button>
+            </div>
+            <div className="seg">
               <button className={view === "list" ? "on" : ""} onClick={() => setView("list")}>
                 Liste
               </button>
@@ -366,13 +394,14 @@ export default function Dashboard() {
 
         {flash && <div className="flash">{flash}</div>}
 
-        {rows.length === 0 ? (
+        {shown.length === 0 ? (
           <p className="muted" style={{ marginTop: 12 }}>
-            Aucune réservation.
+            Aucune réservation
+            {period === "upcoming" ? " à venir." : period === "past" ? " passée." : "."}
           </p>
         ) : view === "list" ? (
           <div className="rgrid">
-            {rows.map((r, i) => (
+            {shown.map((r, i) => (
               <Card key={r.ref + i} r={r} />
             ))}
           </div>
