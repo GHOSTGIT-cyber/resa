@@ -65,7 +65,8 @@ tr:nth-child(even) td{background:#f8f9fc}
 .rcard-when{font-size:1.02rem}
 .rcard-when strong{color:var(--orange)}
 .dayhead strong{color:var(--orange)}
-.rcard-meta{color:var(--muted);font-size:.9rem;display:flex;flex-wrap:wrap;gap:5px}
+.rcard-meta{color:var(--muted);font-size:.9rem;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.sitechip{background:var(--ink);color:#fff;border-radius:999px;padding:2px 9px;font-size:.72rem;font-weight:700}
 .rcard-name{font-weight:800;font-size:1.05rem;margin-top:2px}
 .rcard-line{display:flex;align-items:center;gap:8px;font-size:.92rem;min-width:0}
 .rcard-line .k{color:var(--muted);min-width:48px;flex-shrink:0}

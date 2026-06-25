@@ -39,6 +39,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState("list"); // "list" | "day"
   const [period, setPeriod] = useState("upcoming"); // "upcoming" | "past" | "all"
+  const [siteFilter, setSiteFilter] = useState("all"); // "all" | <siteId>
   const [copied, setCopied] = useState("");
   const [flash, setFlash] = useState("");
   const [busy, setBusy] = useState("");
@@ -200,10 +201,15 @@ export default function Dashboard() {
 
   if (!data) return <div className="wrap">Chargement…</div>;
 
-  const { authed, brand, stats, reservations } = data;
+  const { authed, brand, sites, stats, reservations } = data;
+  const siteList = sites || [];
+  const multiSite = siteList.length > 1;
+  const siteName = Object.fromEntries(siteList.map((s) => [s.id, s.name]));
   const slots = Object.entries(stats.bySlot || {}).sort();
   // Public : on masque les annulées. Connecté : on voit tout (annulées grisées).
-  const rows = authed ? reservations : reservations.filter((r) => r.status !== "cancelled");
+  let rows = authed ? reservations : reservations.filter((r) => r.status !== "cancelled");
+  // Filtre par site (multi-sites : Beauvallon / Croix-Valmer / Tous).
+  if (multiSite && siteFilter !== "all") rows = rows.filter((r) => r.siteId === siteFilter);
 
   // Filtre période : à venir (défaut) / passées / toutes (comparaison de dates AAAA-MM-JJ).
   const now = new Date();
@@ -247,6 +253,7 @@ export default function Dashboard() {
         </div>
 
         <div className="rcard-meta">
+          {multiSite && r.siteId && <span className="sitechip">{siteName[r.siteId] || r.siteId}</span>}
           <span>{r.participants} pers.</span>
           {r.formule && <span>· {r.formule}</span>}
           {r.level && <span>· {r.level}</span>}
@@ -326,7 +333,13 @@ export default function Dashboard() {
   return (
     <div className="wrap">
       <header className="top">
-        <h1>Réservations — {brand || "eFoil"}</h1>
+        <h1>
+          {!multiSite
+            ? `Réservations — ${brand || "eFoil"}`
+            : siteFilter === "all"
+            ? "Réservations — tous les sites"
+            : `Réservations — ${siteName[siteFilter] || siteFilter}`}
+        </h1>
         <span className="badge">{authed ? "Accès complet" : "Vue publique"}</span>
       </header>
 
@@ -363,6 +376,22 @@ export default function Dashboard() {
       </div>
 
       <div className="section">
+        {multiSite && (
+          <div className="seg" style={{ marginBottom: 12 }}>
+            <button className={siteFilter === "all" ? "on" : ""} onClick={() => setSiteFilter("all")}>
+              Tous les sites
+            </button>
+            {siteList.map((s) => (
+              <button
+                key={s.id}
+                className={siteFilter === s.id ? "on" : ""}
+                onClick={() => setSiteFilter(s.id)}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="row" style={{ justifyContent: "space-between" }}>
           <h2 style={{ margin: 0 }}>Réservations</h2>
           <div className="row">

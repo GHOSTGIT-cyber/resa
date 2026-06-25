@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { readAll, add, remove, setStatus, update, stats, STATUSES } from "../../../lib/store";
 import { COOKIE, isAuthed } from "../../../lib/auth";
 import { notify, sendConfirmation, sendProposal, sendCancellation } from "../../../lib/notify";
+import { resolveSite, enabledSites, enabledSiteIds, defaultSiteId } from "../../../lib/sites";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +27,11 @@ export async function OPTIONS() {
 // Authentifié (cookie) : + nom, téléphone, e-mail, message
 export async function GET() {
   const isAuth = authed();
-  const all = readAll().sort((a, b) => (a.date + a.slot).localeCompare(b.date + b.slot));
+  // Isolation : on ne lit QUE les réservations des sites gérés par ce déploiement.
+  const enabled = enabledSiteIds();
+  const all = readAll()
+    .filter((r) => enabled.includes(r.siteId || defaultSiteId()))
+    .sort((a, b) => (a.date + a.slot).localeCompare(b.date + b.slot));
   const list = all.map((r) => {
     const base = {
       ref: r.ref,
@@ -46,9 +51,11 @@ export async function GET() {
     }
     return base;
   });
+  const sites = enabledSites();
   return NextResponse.json({
     authed: isAuth,
-    brand: process.env.BRAND_NAME || "eFoil Côte d'Azur",
+    brand: sites[0]?.name || "eFoil",
+    sites,
     stats: stats(all),
     reservations: list,
   });
@@ -91,7 +98,8 @@ export async function POST(request) {
     level: String(body.level || "").slice(0, 40),
     message: String(body.message || "").slice(0, 1000),
     status: "pending",
-    siteId: process.env.SITE_ID || "cotedazur", // marque (pour fusion future des dashboards)
+    // site verrouillé aux sites de ce déploiement (?site=... ou domaine d'arrivée)
+    siteId: resolveSite(request.headers.get("host"), new URL(request.url).searchParams.get("site")),
     createdAt: new Date().toISOString(),
   };
   add(reservation);
