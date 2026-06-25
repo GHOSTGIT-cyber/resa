@@ -201,11 +201,10 @@ export default function Dashboard() {
 
   if (!data) return <div className="wrap">Chargement…</div>;
 
-  const { authed, brand, sites, stats, reservations } = data;
+  const { authed, brand, sites, reservations } = data;
   const siteList = sites || [];
   const multiSite = siteList.length > 1;
   const siteName = Object.fromEntries(siteList.map((s) => [s.id, s.name]));
-  const slots = Object.entries(stats.bySlot || {}).sort();
   // Public : on masque les annulées. Connecté : on voit tout (annulées grisées).
   let rows = authed ? reservations : reservations.filter((r) => r.status !== "cancelled");
   // Filtre par site (multi-sites : Beauvallon / Croix-Valmer / Tous).
@@ -223,6 +222,18 @@ export default function Dashboard() {
       ? r.date && r.date < todayStr
       : !r.date || r.date >= todayStr;
   const shown = rows.filter(inPeriod);
+
+  // Compteurs alignés sur ce qui est AFFICHÉ (même période + site que la liste),
+  // annulées exclues. Évite l'écart trompeur « 1 résa active mais aucune à venir ».
+  const counted = shown.filter((r) => r.status !== "cancelled");
+  const vStats = { totalReservations: counted.length, totalParticipants: 0, bySlot: {}, byDate: {} };
+  for (const r of counted) {
+    const p = Number(r.participants) || 0;
+    vStats.totalParticipants += p;
+    if (r.slot) vStats.bySlot[r.slot] = (vStats.bySlot[r.slot] || 0) + p;
+    if (r.date) vStats.byDate[r.date] = (vStats.byDate[r.date] || 0) + p;
+  }
+  const slots = Object.entries(vStats.bySlot).sort();
 
   function StatusBadge({ s }) {
     return <span className={"st st-" + s}>{STATUS_LABEL[s] || s}</span>;
@@ -345,11 +356,11 @@ export default function Dashboard() {
 
       <div className="cards">
         <div className="card">
-          <div className="num">{stats.totalReservations}</div>
+          <div className="num">{vStats.totalReservations}</div>
           <div className="lbl">Réservations actives</div>
         </div>
         <div className="card">
-          <div className="num">{stats.totalParticipants}</div>
+          <div className="num">{vStats.totalParticipants}</div>
           <div className="lbl">Participants au total</div>
         </div>
         <div className="card">
@@ -357,7 +368,7 @@ export default function Dashboard() {
           <div className="lbl">Créneaux concernés</div>
         </div>
         <div className="card">
-          <div className="num">{Object.keys(stats.byDate || {}).length}</div>
+          <div className="num">{Object.keys(vStats.byDate).length}</div>
           <div className="lbl">Dates concernées</div>
         </div>
       </div>
