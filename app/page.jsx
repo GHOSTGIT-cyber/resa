@@ -100,7 +100,8 @@ export default function Dashboard() {
   }
 
   // Confirme la réservation ET envoie le mail de validation au client.
-  async function confirmAndNotify(r) {
+  // withPayment=true => le mail inclut le bouton de paiement SumUp (acompte).
+  async function confirmAndNotify(r, withPayment) {
     if (!r.email) {
       if (!window.confirm("Pas d'e-mail client. Confirmer quand même (sans envoi) ?")) return;
     }
@@ -109,11 +110,12 @@ export default function Dashboard() {
       const res = await fetch("/api/reservations", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ref: r.ref, status: "confirmed", notify: true }),
+        body: JSON.stringify({ ref: r.ref, status: "confirmed", notify: true, payment: !!withPayment }),
       });
       const data = await res.json().catch(() => ({}));
       const e = data?.emailed;
-      if (e?.ok) flashMsg(`✅ E-mail de validation envoyé à ${r.email}`);
+      const tag = withPayment ? "✅ Confirmé + lien 50€ envoyé à " : "✅ E-mail de validation envoyé à ";
+      if (e?.ok) flashMsg(tag + r.email);
       else if (e && e.ok === false) flashMsg(`⚠️ Confirmé, mais e-mail NON envoyé : ${e.error || "erreur"}`);
       else flashMsg("Réservation confirmée.");
     } finally {
@@ -137,6 +139,21 @@ export default function Dashboard() {
       if (withMail && e?.ok) flashMsg(`Réservation annulée — mail envoyé à ${r.email}`);
       else if (withMail && e && e.ok === false) flashMsg(`Annulée, mais e-mail NON envoyé : ${e.error || "erreur"}`);
       else flashMsg("Réservation annulée (sans mail).");
+    } finally {
+      setBusy("");
+      load();
+    }
+  }
+
+  // Bascule le statut "payé" (manuel) — l'employé coche quand il voit le 50€ dans SumUp.
+  async function togglePaid(r) {
+    setBusy(r.ref);
+    try {
+      await fetch("/api/reservations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ref: r.ref, paid: !r.paid }),
+      });
     } finally {
       setBusy("");
       load();
@@ -268,6 +285,20 @@ export default function Dashboard() {
           <span>{r.participants} pers.</span>
           {r.formule && <span>· {r.formule}</span>}
           {r.level && <span>· {r.level}</span>}
+          {r.paid && (
+            <span
+              style={{
+                background: "#e6f7ec",
+                color: "#1a7f4b",
+                borderRadius: "999px",
+                padding: "2px 8px",
+                fontSize: "12px",
+                fontWeight: "bold",
+              }}
+            >
+              💶 Payé
+            </span>
+          )}
         </div>
 
         {r.status === "proposed" && r.proposedDate && (
@@ -292,21 +323,48 @@ export default function Dashboard() {
 
             <div className="rcard-actions">
               {r.status !== "confirmed" && !cancelled && (
-                <button
-                  className="mini ok"
-                  disabled={busy === r.ref}
-                  onClick={() => confirmAndNotify(r)}
-                >
-                  {busy === r.ref ? "…" : "✅ Confirmer + e-mail"}
-                </button>
+                <>
+                  <button
+                    className="mini ok"
+                    disabled={busy === r.ref}
+                    onClick={() => confirmAndNotify(r, true)}
+                  >
+                    {busy === r.ref ? "…" : "✅ Confirmer + 50€"}
+                  </button>
+                  <button
+                    className="mini ok"
+                    disabled={busy === r.ref}
+                    onClick={() => confirmAndNotify(r, false)}
+                  >
+                    {busy === r.ref ? "…" : "Confirmer sans paiement"}
+                  </button>
+                </>
               )}
               {r.status === "confirmed" && !cancelled && (
+                <>
+                  <button
+                    className="mini"
+                    disabled={busy === r.ref}
+                    onClick={() => confirmAndNotify(r, false)}
+                  >
+                    {busy === r.ref ? "…" : "✉️ Renvoyer"}
+                  </button>
+                  <button
+                    className="mini"
+                    disabled={busy === r.ref}
+                    onClick={() => confirmAndNotify(r, true)}
+                  >
+                    {busy === r.ref ? "…" : "💳 Renvoyer + 50€"}
+                  </button>
+                </>
+              )}
+              {!cancelled && (
                 <button
-                  className="mini"
+                  className={"mini" + (r.paid ? " ok" : "")}
                   disabled={busy === r.ref}
-                  onClick={() => confirmAndNotify(r)}
+                  onClick={() => togglePaid(r)}
                 >
-                  {busy === r.ref ? "…" : "✉️ Renvoyer l'e-mail"}
+                  {r.paid ? "💶 Payé ✓ (annuler)" : "💶 Marquer payé"}
                 </button>
               )}
               {!cancelled && (

@@ -47,7 +47,7 @@ export async function GET() {
       createdAt: r.createdAt,
     };
     if (isAuth) {
-      return { ...base, name: r.name, phone: r.phone, email: r.email, message: r.message };
+      return { ...base, name: r.name, phone: r.phone, email: r.email, message: r.message, paid: !!r.paid };
     }
     return base;
   });
@@ -126,6 +126,17 @@ export async function PATCH(request) {
     body = {};
   }
   const ref = String(body.ref || "");
+
+  // Bascule "payé" (manuel), indépendante du statut de réservation.
+  if (typeof body.paid === "boolean") {
+    if (!ref) return NextResponse.json({ ok: false, error: "ref manquante" }, { status: 400 });
+    const okPaid = update(ref, {
+      paid: body.paid,
+      paidAt: body.paid ? new Date().toISOString() : "",
+    });
+    return NextResponse.json({ ok: okPaid }, { status: okPaid ? 200 : 404 });
+  }
+
   const status = String(body.status || "");
   if (!ref || !STATUSES.includes(status)) {
     return NextResponse.json({ ok: false, error: "paramètres invalides" }, { status: 400 });
@@ -142,9 +153,9 @@ export async function PATCH(request) {
     const r = readAll().find((x) => x.ref === ref);
     if (r) emailed = await sendProposal(r, body.proposal);
   } else if (ok && body.notify && status === "confirmed") {
-    // Validation : on envoie le mail de confirmation au client.
+    // Validation : mail de confirmation au client, avec ou sans lien de paiement.
     const r = readAll().find((x) => x.ref === ref);
-    if (r) emailed = await sendConfirmation(r);
+    if (r) emailed = await sendConfirmation(r, { withPayment: !!body.payment });
   } else if (ok && body.notify && status === "cancelled") {
     // Annulation : on envoie le mail d'annulation au client.
     const r = readAll().find((x) => x.ref === ref);
