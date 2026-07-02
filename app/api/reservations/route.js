@@ -4,6 +4,7 @@ import { readAll, add, remove, setStatus, update, stats, STATUSES } from "../../
 import { COOKIE, isAuthed } from "../../../lib/auth";
 import { notify, sendConfirmation, sendProposal, sendCancellation } from "../../../lib/notify";
 import { resolveSite, enabledSites, enabledSiteIds, defaultSiteId } from "../../../lib/sites";
+import { upsertReservationEvent, deleteReservationEvent } from "../../../lib/google-calendar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -162,6 +163,14 @@ export async function PATCH(request) {
     if (r) emailed = await sendCancellation(r);
   }
 
+  // Agenda Google (best-effort) : event créé/màj à la confirmation, retiré à l'annulation.
+  if (ok && status === "confirmed") {
+    const rc = readAll().find((x) => x.ref === ref);
+    if (rc) await upsertReservationEvent(rc).catch(() => {});
+  } else if (ok && status === "cancelled") {
+    await deleteReservationEvent(ref).catch(() => {});
+  }
+
   return NextResponse.json({ ok, emailed }, { status: ok ? 200 : 404 });
 }
 
@@ -176,5 +185,6 @@ export async function DELETE(request) {
     return NextResponse.json({ ok: false, error: "ref manquante" }, { status: 400 });
   }
   const ok = remove(ref);
+  if (ok) await deleteReservationEvent(ref).catch(() => {});
   return NextResponse.json({ ok }, { status: ok ? 200 : 404 });
 }

@@ -8,6 +8,7 @@ import { readAll, update, setStatus } from "../../lib/store";
 import { verifyActionToken } from "../../lib/links";
 import { brandFor } from "../../lib/sites";
 import { sendConfirmation, sendClientAcceptedNotice } from "../../lib/notify";
+import { upsertReservationEvent } from "../../lib/google-calendar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -133,8 +134,12 @@ export async function POST(request) {
     }
     setStatus(ref, "confirmed");
     const fresh = findByRef(ref) || r;
-    // Mails « dans tous les sens » : confirmation au client + notif à l'équipe.
-    await Promise.allSettled([sendConfirmation(fresh), sendClientAcceptedNotice(fresh)]);
+    // Mails « dans tous les sens » + event agenda (best-effort, ne bloque pas la page).
+    await Promise.allSettled([
+      sendConfirmation(fresh),
+      sendClientAcceptedNotice(fresh),
+      upsertReservationEvent(fresh),
+    ]);
   }
 
   const r2 = findByRef(ref) || r;
