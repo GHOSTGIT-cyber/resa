@@ -85,6 +85,25 @@ export default function Dashboard() {
     load();
   }
 
+  // Pousse toutes les résa déjà confirmées (anciennes + à venir) dans le Google Agenda.
+  async function syncCalendar() {
+    setBusy("__sync__");
+    try {
+      const res = await fetch("/api/calendar-sync", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (data.ok) {
+        flashMsg(
+          `📅 Agenda synchronisé : ${data.synced}/${data.total} résa confirmées` +
+            (data.failed ? ` (${data.failed} échec·s)` : "")
+        );
+      } else {
+        flashMsg(`⚠️ ${data.error || "Synchronisation impossible"}`);
+      }
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function setStatus(ref, status) {
     await fetch("/api/reservations", {
       method: "PATCH",
@@ -531,9 +550,19 @@ export default function Dashboard() {
       </div>
 
       {authed ? (
-        <button className="btn secondary" onClick={logout}>
-          Masquer les données / se déconnecter
-        </button>
+        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+          <button
+            className="btn secondary"
+            disabled={busy === "__sync__"}
+            onClick={syncCalendar}
+            title="Ajoute au Google Agenda toutes les réservations déjà confirmées"
+          >
+            {busy === "__sync__" ? "Synchronisation…" : "📅 Synchroniser l'agenda"}
+          </button>
+          <button className="btn secondary" onClick={logout}>
+            Masquer les données / se déconnecter
+          </button>
+        </div>
       ) : (
         <div className="lock">
           <strong>Données confidentielles masquées</strong>
