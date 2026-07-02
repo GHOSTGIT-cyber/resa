@@ -291,10 +291,18 @@ export default function Dashboard() {
   function Card({ r }) {
     const cancelled = r.status === "cancelled";
     const confirmed = r.status === "confirmed";
+    const pending = r.status === "pending";
     return (
       <div
         className={
-          "rcard" + (cancelled ? " rcard-cancel" : confirmed ? " rcard-confirmed" : "")
+          "rcard" +
+          (cancelled
+            ? " rcard-cancel"
+            : confirmed
+            ? " rcard-confirmed"
+            : pending
+            ? " rcard-pending"
+            : "")
         }
       >
         <div className="rcard-top">
