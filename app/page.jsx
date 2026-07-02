@@ -290,8 +290,13 @@ export default function Dashboard() {
   // Une carte = un client, entièrement visible (pensé mobile, aucun scroll latéral).
   function Card({ r }) {
     const cancelled = r.status === "cancelled";
+    const confirmed = r.status === "confirmed";
     return (
-      <div className={"rcard" + (cancelled ? " rcard-cancel" : "")}>
+      <div
+        className={
+          "rcard" + (cancelled ? " rcard-cancel" : confirmed ? " rcard-confirmed" : "")
+        }
+      >
         <div className="rcard-top">
           <div className="rcard-when">
             <strong>{fmtDate(r.date)}</strong> · {r.slot}
