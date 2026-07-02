@@ -93,7 +93,7 @@ export default function Dashboard() {
       const data = await res.json().catch(() => ({}));
       if (data.ok) {
         flashMsg(
-          `📅 Agenda synchronisé : ${data.synced}/${data.total} résa confirmées` +
+          `📅 Agenda synchronisé : ${data.synced}/${data.total} réservations` +
             (data.failed ? ` (${data.failed} échec·s)` : "")
         );
       } else {

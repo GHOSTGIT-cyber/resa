@@ -107,6 +107,8 @@ export async function POST(request) {
 
   // notifications serveur (WhatsApp + e-mail) — n'échouent jamais la requête
   await notify(reservation).catch(() => {});
+  // agenda : on ajoute déjà la résa "en attente" (orange) — best-effort
+  await upsertReservationEvent(reservation).catch(() => {});
 
   return new NextResponse(JSON.stringify({ ok: true, ref: reservation.ref }), {
     status: 201,
@@ -163,12 +165,13 @@ export async function PATCH(request) {
     if (r) emailed = await sendCancellation(r);
   }
 
-  // Agenda Google (best-effort) : event créé/màj à la confirmation, retiré à l'annulation.
-  if (ok && status === "confirmed") {
+  // Agenda Google (best-effort) : à CHAQUE statut on met l'event à jour (couleur selon
+  // le statut : en attente=orange, confirmée=vert, proposé=bleu), retiré à l'annulation.
+  if (ok && status === "cancelled") {
+    await deleteReservationEvent(ref).catch(() => {});
+  } else if (ok) {
     const rc = readAll().find((x) => x.ref === ref);
     if (rc) await upsertReservationEvent(rc).catch(() => {});
-  } else if (ok && status === "cancelled") {
-    await deleteReservationEvent(ref).catch(() => {});
   }
 
   return NextResponse.json({ ok, emailed }, { status: ok ? 200 : 404 });
