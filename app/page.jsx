@@ -164,15 +164,25 @@ export default function Dashboard() {
     }
   }
 
-  // Bascule le statut "payé" (manuel) — l'employé coche quand il voit le 50€ dans SumUp.
-  async function togglePaid(r) {
+  // Bascule le statut "payé" — l'employé coche quand il voit l'acompte dans SumUp.
+  // Marquer payé => la résa passe CONFIRMÉE, le client reçoit le mail « paiement reçu »,
+  // et l'agenda affiche « 💶 PAYÉ ». resend=true : renvoyer le mail à une résa déjà payée.
+  async function togglePaid(r, resend) {
+    const paid = resend ? true : !r.paid;
     setBusy(r.ref);
     try {
-      await fetch("/api/reservations", {
+      const res = await fetch("/api/reservations", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ref: r.ref, paid: !r.paid }),
+        body: JSON.stringify({ ref: r.ref, paid, resend: !!resend }),
       });
+      const data = await res.json().catch(() => ({}));
+      const e = data?.emailed;
+      if (!paid) flashMsg("Paiement retiré (aucun mail envoyé).");
+      else if (data?.cancelled) flashMsg("💶 Paiement enregistré — résa ANNULÉE, aucun mail envoyé (à rembourser ?).");
+      else if (e?.ok) flashMsg(`💶 Payé — mail « paiement reçu » envoyé à ${r.email}`);
+      else if (e && e.ok === false) flashMsg(`⚠️ Marqué payé, mais e-mail NON envoyé : ${e.error || "erreur"}`);
+      else flashMsg("💶 Marqué payé.");
     } finally {
       setBusy("");
       load();
@@ -394,9 +404,19 @@ export default function Dashboard() {
                 <button
                   className={"mini" + (r.paid ? " ok" : "")}
                   disabled={busy === r.ref}
-                  onClick={() => togglePaid(r)}
+                  onClick={() => togglePaid(r, false)}
                 >
-                  {r.paid ? "💶 Payé ✓ (annuler)" : "💶 Marquer payé"}
+                  {busy === r.ref ? "…" : r.paid ? "💶 Payé ✓ (annuler)" : "💶 Marquer payé + mail"}
+                </button>
+              )}
+              {!cancelled && r.paid && (
+                <button
+                  className="mini"
+                  disabled={busy === r.ref}
+                  onClick={() => togglePaid(r, true)}
+                  title="Renvoyer au client le mail « paiement reçu »"
+                >
+                  {busy === r.ref ? "…" : "✉️ Renvoyer le reçu"}
                 </button>
               )}
               {!cancelled && (

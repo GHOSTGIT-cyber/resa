@@ -1,6 +1,8 @@
 // Retour du client après paiement sur la page SumUp. On vérifie le statut du
-// checkout (source de vérité = l'API SumUp) et on passe la résa en « Payé ».
-import { checkAndMarkPaid } from "../../../../lib/sumup";
+// checkout (source de vérité = l'API SumUp) puis markPaid() : statut confirmé,
+// mail « paiement reçu » au client, « 💶 PAYÉ » dans l'agenda.
+import { checkPaymentStatus } from "../../../../lib/sumup";
+import { markPaid } from "../../../../lib/paid";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,8 +21,17 @@ function page(title, msg, ok) {
 
 export async function GET(request) {
   const ref = new URL(request.url).searchParams.get("ref") || "";
-  const res = await checkAndMarkPaid(ref);
-  if (res.paid) return page("Paiement reçu ✅", "Merci ! Votre acompte est bien enregistré. À très vite sur l'eau 🌊", true);
+  const res = await checkPaymentStatus(ref);
+  if (res.paid) {
+    // markPaid est idempotent : le mail ne part qu'au 1er passage en payé
+    // (le webhook peut arriver avant ou après ce retour navigateur).
+    await markPaid(ref, true).catch(() => {});
+    return page(
+      "Paiement reçu ✅",
+      "Merci ! Votre acompte est bien enregistré et un e-mail de confirmation vient de vous être envoyé. À très vite sur l'eau 🌊",
+      true
+    );
+  }
   return page(
     "Paiement en cours",
     "Si tu viens de payer, le statut peut mettre quelques instants. Sinon, tu peux réessayer depuis l'e-mail.",

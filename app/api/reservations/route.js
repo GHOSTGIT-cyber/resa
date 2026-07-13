@@ -5,6 +5,7 @@ import { COOKIE, isAuthed } from "../../../lib/auth";
 import { notify, sendConfirmation, sendProposal, sendCancellation } from "../../../lib/notify";
 import { resolveSite, enabledSites, enabledSiteIds, defaultSiteId } from "../../../lib/sites";
 import { upsertReservationEvent, deleteReservationEvent } from "../../../lib/google-calendar";
+import { markPaid } from "../../../lib/paid";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -130,14 +131,13 @@ export async function PATCH(request) {
   }
   const ref = String(body.ref || "");
 
-  // Bascule "payé" (manuel), indépendante du statut de réservation.
+  // Bascule "payé" (bouton 💶 de l'employé). markPaid() fait TOUT : statut confirmé,
+  // mail « paiement reçu » au client, et « 💶 PAYÉ » dans l'agenda.
+  // body.resend = renvoyer le mail à une résa DÉJÀ payée.
   if (typeof body.paid === "boolean") {
     if (!ref) return NextResponse.json({ ok: false, error: "ref manquante" }, { status: 400 });
-    const okPaid = update(ref, {
-      paid: body.paid,
-      paidAt: body.paid ? new Date().toISOString() : "",
-    });
-    return NextResponse.json({ ok: okPaid }, { status: okPaid ? 200 : 404 });
+    const res = await markPaid(ref, body.paid, { resend: !!body.resend });
+    return NextResponse.json(res, { status: res.ok ? 200 : 404 });
   }
 
   const status = String(body.status || "");
