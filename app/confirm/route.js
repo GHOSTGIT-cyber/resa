@@ -135,8 +135,10 @@ export async function POST(request) {
     setStatus(ref, "confirmed");
     const fresh = findByRef(ref) || r;
     // Mails « dans tous les sens » + event agenda (best-effort, ne bloque pas la page).
+    // withPayment: le mail de confirmation inclut le lien de paiement UNIQUE (traçable).
+    // Sans ça, le client se rabattait sur un lien externe/fixe -> paiement fantôme.
     await Promise.allSettled([
-      sendConfirmation(fresh),
+      sendConfirmation(fresh, { withPayment: true }),
       sendClientAcceptedNotice(fresh),
       upsertReservationEvent(fresh),
     ]);
