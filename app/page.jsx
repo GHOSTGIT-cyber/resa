@@ -526,6 +526,36 @@ export default function Dashboard() {
         </div>
       )}
 
+      {authed &&
+        (() => {
+          const todo = Object.entries(CARD_ATTRIB)
+            .filter(([, a]) => !a.ok)
+            .map(([card, a]) => {
+              const resa = reservations.find((x) => x.ref && x.ref.endsWith(a.r));
+              return { card, a, paid: resa ? resa.paid : false };
+            })
+            .filter((t) => !t.paid);
+          if (!todo.length)
+            return (
+              <div className="section" style={{ background: "#e4f4ec", color: "#157F4B", borderRadius: 10, padding: "12px 14px", fontWeight: 600 }}>
+                ✓ Tous les acomptes de l'ancien lien sont vérifiés — l'outil au-dessus ne sert plus.
+              </div>
+            );
+          return (
+            <div className="section" style={{ border: "1px solid #f3c78a", background: "#fff8ef", borderRadius: 10, padding: "12px 14px" }}>
+              <h2 style={{ marginTop: 0 }}>⏳ Acomptes à vérifier — il en reste {todo.length}</h2>
+              <p className="muted" style={{ margin: "0 0 8px" }}>
+                Payés via l'ancien lien, à solder une seule fois. Ensuite, tout se rattache automatiquement.
+              </p>
+              {todo.map((t) => (
+                <div key={t.card} style={{ fontSize: 13, padding: "5px 0", borderTop: "1px solid #f0e0c8" }}>
+                  <b>{t.a.n}</b> · carte ••{t.card} · réf {t.a.r} · séance {t.a.s}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
       <div className="cards">
         <div className="card">
           <div className="num">{vStats.totalReservations}</div>
