@@ -164,6 +164,28 @@ export async function GET() {
 
   let body = `<h1>Réconciliation des acomptes (50 €)</h1>` + banner;
 
+  // --- Recherche par 4 chiffres de carte -> réservation probable (attribution déduite) ---
+  const ATTRIB = {
+    "1025": { n: "Pons + Parrat", r: "L5JU + Z3O3", s: "11/08 09:30", k: "ok", note: "2 places meme seance, meme carte. Deja coches paye." },
+    "8331": { n: "Julie RODIER", r: "9LBW", s: "14/07 08:00 (passee)", k: "ok", note: "Acompte + solde 35 EUR au terminal, meme carte. Quasi certain." },
+    "3047": { n: "Thomas MAURE", r: "PTBL", s: "12/07 11:00 (passee)", k: "prob", note: "Resa creee 2h30 avant le paiement." },
+    "1002": { n: "LIZAN GERARD", r: "96BZ", s: "01/08 11:00", k: "prob", note: "Creee 2h39 avant le paiement, meme jour." },
+    "6161": { n: "Guillaume Maurin", r: "UJEC", s: "04/08 09:30", k: "prob", note: "Seule resa creee le jour du paiement." },
+    "0140": { n: "Dubois lukas", r: "SWUC", s: "15/07 11:00 (passee)", k: "prob", note: "Creee 4h avant, la plus proche du 13/07." },
+    "0770": { n: "Cegarra Alec (a confirmer)", r: "K4WO", s: "28/07 09:30", k: "prob", note: "Ou SAHORES / Instituto / Mark Stroh (seances 23-28/07). La carte tranche." },
+    "7922": { n: "chaimaa Elouahabi (a confirmer)", r: "4CAY", s: "27/07 11:00", k: "prob", note: "Proximite max mais resa en attente -> doute." },
+    "5474": { n: "romain druenne (a confirmer)", r: "CG1C", s: "11/07 09:30 (passee)", k: "prob", note: "Couple ambigu du 06/07." },
+    "1622": { n: "William Vitali (a confirmer)", r: "5DSB", s: "01/08 11:00", k: "prob", note: "Attribution de repli, la plus incertaine." },
+    "2795": { n: "Rami ALLAM", r: "7JXP", s: "01/08 12:30", k: "ok", note: "Paye AUTOMATIQUEMENT. Deja coche." },
+    "4147": { n: "Dautrement", r: "DJEW", s: "14/07 11:00 (passee)", k: "ok", note: "Paye AUTOMATIQUEMENT. Deja coche." },
+    "1209": { n: "Bjorn Christiaens", r: "URFL", s: "23/07 11:00 (passee)", k: "ok", note: "Deja coche a la main." },
+  };
+  body +=
+    `<h2>🔎 Vérifier un acompte par la carte</h2>` +
+    `<p class="muted" style="margin:2px 0 10px;">Le client donne les 4 derniers chiffres de sa carte → réponse immédiate, sans ouvrir SumUp.</p>` +
+    `<div class="card"><input id="rq" inputmode="numeric" maxlength="4" placeholder="4 chiffres" autocomplete="off" style="font-size:22px;padding:10px 14px;border:1px solid #D7E1E2;border-radius:8px;width:150px;letter-spacing:.25em;font-family:monospace;"><div id="rr" style="margin-top:12px;"></div></div>` +
+    `<script>(function(){var A=${JSON.stringify(ATTRIB)};var q=document.getElementById('rq'),r=document.getElementById('rr');if(!q)return;function e(s){return String(s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}q.addEventListener('input',function(){var v=q.value.replace(/\\D/g,'').slice(0,4);q.value=v;if(v.length<4){r.innerHTML='';return;}var a=A[v];if(!a){r.innerHTML='<div style="background:#f8e4e1;color:#B5352A;border-radius:8px;padding:12px 14px;font-weight:600;">Carte inconnue — aucun acompte de 50 EUR en ligne avec cette carte. A encaisser sur place.</div>';return;}var done=a.k==='ok';var bg=done?'#e4f4ec':'#f8eedd',fg=done?'#157F4B':'#9A6410';var head=done?('OK — '+e(a.n)):('Probablement '+e(a.n));var extra=done?'':'<br><b>Si le client confirme : coche « paye » sur la ref '+e(a.r)+'.</b>';r.innerHTML='<div style="background:'+bg+';color:'+fg+';border-radius:8px;padding:12px 14px;"><b>'+head+'</b> — ref <b>'+e(a.r)+'</b> — seance '+e(a.s)+'<br><span style="font-size:12px;opacity:.85;">'+e(a.note)+'</span>'+extra+'</div>';});})();</script>`;
+
   if (!tx.ok) {
     body += `<div class="card ko">Impossible de lire les transactions SumUp : ${esc(tx.error)}</div>`;
     return html(body);

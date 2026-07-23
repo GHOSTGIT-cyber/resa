@@ -15,6 +15,25 @@ const TEMPLATES = [
   "Pour mieux vous accueillir, nous vous proposons un autre horaire.",
 ];
 
+// Recoupage TEMPORAIRE des acomptes payés via l'ancien lien : le client cite ses 4 derniers
+// chiffres de carte -> on retrouve sa réservation. Une fois ces résa cochées « payé », cet
+// outil ne sert plus (désormais tout acompte se rattache automatiquement).
+const CARD_ATTRIB = {
+  "1025": { n: "Pons + Parrat", r: "L5JU + Z3O3", s: "11/08 09:30", ok: true, note: "2 places même séance, même carte. Déjà payés." },
+  "8331": { n: "Julie RODIER", r: "9LBW", s: "14/07 08:00 (passée)", ok: true, note: "Acompte + solde 35 € au terminal, même carte." },
+  "3047": { n: "Thomas MAURE", r: "PTBL", s: "12/07 11:00 (passée)", note: "Résa créée 2h30 avant le paiement." },
+  "1002": { n: "LIZAN GERARD", r: "96BZ", s: "01/08 11:00", note: "Créée 2h39 avant, même jour." },
+  "6161": { n: "Guillaume Maurin", r: "UJEC", s: "04/08 09:30", note: "Seule résa créée le jour du paiement." },
+  "0140": { n: "Dubois lukas", r: "SWUC", s: "15/07 11:00 (passée)", note: "Créée 4h avant." },
+  "0770": { n: "Cegarra Alec", r: "K4WO", s: "28/07 09:30", note: "Ou SAHORES / Instituto / Mark Stroh — la carte tranche." },
+  "7922": { n: "chaimaa Elouahabi", r: "4CAY", s: "27/07 11:00", note: "Résa « en attente » → à confirmer." },
+  "5474": { n: "romain druenne", r: "CG1C", s: "11/07 09:30 (passée)", note: "Couple ambigu du 06/07." },
+  "1622": { n: "William Vitali", r: "5DSB", s: "01/08 11:00", note: "Repli, incertain." },
+  "2795": { n: "Rami ALLAM", r: "7JXP", s: "01/08 12:30", ok: true, note: "Payé automatiquement." },
+  "4147": { n: "Dautrement", r: "DJEW", s: "14/07 11:00 (passée)", ok: true, note: "Payé automatiquement." },
+  "1209": { n: "Bjorn Christiaens", r: "URFL", s: "23/07 11:00 (passée)", ok: true, note: "Déjà coché." },
+};
+
 // "2026-06-21" -> "21/06/2026"
 function fmtDate(d) {
   if (!d) return "—";
@@ -50,6 +69,7 @@ export default function Dashboard() {
   const [propDate, setPropDate] = useState("");
   const [propSlot, setPropSlot] = useState("");
   const [propMsg, setPropMsg] = useState("");
+  const [verifQ, setVerifQ] = useState("");
 
   const load = useCallback(async () => {
     const r = await fetch("/api/reservations", { cache: "no-store" });
@@ -463,6 +483,48 @@ export default function Dashboard() {
         </h1>
         <span className="badge">{authed ? "Accès complet" : "Vue publique"}</span>
       </header>
+
+      {authed && (
+        <div className="section">
+          <h2>🔎 Vérifier un acompte (4 chiffres de carte)</h2>
+          <p className="muted" style={{ margin: "2px 0 8px" }}>
+            Le client donne les 4 derniers chiffres de sa carte → sa réservation s'affiche. Sinon, il n'a pas payé en ligne.
+          </p>
+          <input
+            inputMode="numeric"
+            maxLength={4}
+            placeholder="4 chiffres"
+            value={verifQ}
+            onChange={(e) => setVerifQ(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            style={{ fontSize: 20, padding: "8px 12px", letterSpacing: ".22em", width: 130, fontFamily: "monospace", borderRadius: 8, border: "1px solid #ccd" }}
+          />
+          {verifQ.length === 4 &&
+            (() => {
+              const a = CARD_ATTRIB[verifQ];
+              if (!a)
+                return (
+                  <div style={{ marginTop: 10, background: "#f8e4e1", color: "#B5352A", borderRadius: 8, padding: "10px 12px", fontWeight: 600 }}>
+                    Aucun acompte en ligne avec cette carte → à encaisser sur place.
+                  </div>
+                );
+              return (
+                <div style={{ marginTop: 10, background: a.ok ? "#e4f4ec" : "#f8eedd", color: a.ok ? "#157F4B" : "#9A6410", borderRadius: 8, padding: "10px 12px" }}>
+                  <b>
+                    {a.ok ? "✓ " : "Probablement "}
+                    {a.n}
+                  </b>{" "}
+                  — réf <b>{a.r}</b> — séance {a.s}
+                  <div style={{ fontSize: 12, opacity: 0.85 }}>{a.note}</div>
+                  {!a.ok && (
+                    <div style={{ marginTop: 4 }}>
+                      <b>Si le client confirme : coche « payé » sur {a.r}.</b>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+        </div>
+      )}
 
       <div className="cards">
         <div className="card">
