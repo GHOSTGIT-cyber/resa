@@ -109,6 +109,22 @@ export async function GET() {
     const m = joined.match(/EFCA-\d{6}-[A-Z0-9]{4}/i);
     return { text: joined, ref: m ? m[0].toUpperCase() : "" };
   }
+  // 4 derniers chiffres + marque de carte (pour faire citer le client — dernier recours).
+  function cardInfo(t) {
+    const d = details[t.id || t.transaction_code];
+    const c = d && d.card;
+    if (!c) return "";
+    const l4 = c.last_4_digits || c.last4 || "";
+    const brand = c.type || "";
+    return (l4 ? "•••• " + l4 : "") + (brand ? " " + brand : "");
+  }
+  // Aujourd'hui en heure de Paris (YYYY-MM-DD) pour dire séance passée / à venir.
+  const todayParis = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 
   // --- Bandeau verdict ---
   let banner;
@@ -151,19 +167,21 @@ export async function GET() {
             origine = `<span class="fixe">lien fixe — non identifié</span>`;
           }
         }
+        const carte = type === "ECOM" && st === "SUCCESSFUL" ? esc(cardInfo(t)) : "";
         return (
           `<tr><td>${esc(fmt(t.timestamp || t.date))}</td>` +
           `<td><b>${esc(money(t.amount, t.currency))}</b></td>` +
           `<td><span class="badge ${cls}">${esc(st || "?")}</span></td>` +
           `<td>${esc(type || "—")}</td>` +
           `<td>${origine}</td>` +
+          `<td>${carte || '<span class="muted">—</span>'}</td>` +
           `<td class="muted">${esc(t.transaction_code || t.id || "—")}</td></tr>`
         );
       })
       .join("");
     txHtml =
       `<div class="card"><table><tr><th>Quand (Paris)</th><th>Montant</th><th>Statut</th>` +
-      `<th>Type</th><th>Origine (en ligne)</th><th>Code SumUp</th></tr>${rows}</table>` +
+      `<th>Type</th><th>Origine (en ligne)</th><th>Carte</th><th>Code SumUp</th></tr>${rows}</table>` +
       `<p class="muted">ECOM = paiement en ligne · POS = terminal au local (pas un acompte de résa). ` +
       `« API · EFCA-… » = passé par notre lien unique (traçable). « lien fixe » = acompte encaissé mais ` +
       `sans référence : à recouper avec les réservations ci-dessous.</p></div>`;
@@ -171,14 +189,21 @@ export async function GET() {
 
   // --- Réservations confirmées NON payées (pour recouper par timing) ---
   const cuRows = confirmedUnpaid
-    .map(
-      (r) =>
+    .map((r) => {
+      const passee = String(r.date) < todayParis;
+      const flag = passee
+        ? `<span class="badge b-w">séance passée</span>`
+        : `<span class="badge b-ok">à venir</span>`;
+      return (
         `<tr><td>${esc(r.ref)}</td><td>${esc(r.name || "—")}</td>` +
-        `<td>${esc(r.date)} ${esc(r.slot)}</td><td class="muted">créée ${esc(fmt(r.createdAt))}</td></tr>`
-    )
+        `<td>${esc(r.date)} ${esc(r.slot)} ${flag}</td>` +
+        `<td class="muted">${esc(r.phone || "—")}</td>` +
+        `<td class="muted">créée ${esc(fmt(r.createdAt))}</td></tr>`
+      );
+    })
     .join("");
   const cuHtml = confirmedUnpaid.length
-    ? `<div class="card"><table><tr><th>Réf</th><th>Client</th><th>Séance</th><th>Création</th></tr>${cuRows}</table></div>`
+    ? `<div class="card"><table><tr><th>Réf</th><th>Client</th><th>Séance</th><th>Téléphone</th><th>Création</th></tr>${cuRows}</table></div>`
     : `<div class="card ok">Aucune réservation confirmée en attente de paiement. 👌</div>`;
 
   const phantomNote = phantomCount
