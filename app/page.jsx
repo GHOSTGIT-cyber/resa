@@ -15,18 +15,20 @@ const TEMPLATES = [
   "Pour mieux vous accueillir, nous vous proposons un autre horaire.",
 ];
 
-// Recoupage TEMPORAIRE des acomptes payés via l'ancien lien : le client cite ses 4 derniers
-// chiffres de carte -> on retrouve sa réservation. Une fois ces résa cochées « payé », cet
-// outil ne sert plus (désormais tout acompte se rattache automatiquement).
-const CARD_ATTRIB = {
-  "1025": { n: "Pons + Parrat", r: "L5JU + Z3O3", s: "11/08 09:30", sent: true, note: "Reçu déjà envoyé (carte ••1025 × 2 places). À re-vérifier par la carte quand possible, sans rien redire au client." },
-  "1002": { n: "LIZAN GERARD", r: "96BZ", s: "01/08 11:00", note: "Créée 2h39 avant le paiement, même jour." },
-  "6161": { n: "Guillaume Maurin", r: "UJEC", s: "04/08 09:30", note: "Seule résa créée le jour du paiement." },
-  "0770": { n: "Cegarra Alec", r: "K4WO", s: "28/07 09:30", note: "Ou SAHORES / Instituto / Mark Stroh — la carte tranche." },
-  "7922": { n: "chaimaa Elouahabi", r: "4CAY", s: "27/07 11:00", note: "Résa « en attente » → à confirmer." },
-  "1622": { n: "William Vitali", r: "5DSB", s: "01/08 11:00", note: "Repli, incertain." },
-  "2795": { n: "Rami ALLAM", r: "7JXP", s: "01/08 12:30", ok: true, note: "Payé automatiquement (le système marche)." },
-};
+// Données du RAPPEL uniquement (liste « à vérifier »). La RECHERCHE, elle, lit les vrais
+// paiements SumUp (/api/deposits) et ne suggère aucun nom : le client dit le sien.
+const TO_VERIFY = [
+  { n: "LIZAN GERARD", ref: "96BZ", card: "1002", s: "01/08 11:00" },
+  { n: "Guillaume Maurin", ref: "UJEC", card: "6161", s: "04/08 09:30" },
+  { n: "Cegarra Alec", ref: "K4WO", card: "0770", s: "28/07 09:30" },
+  { n: "chaimaa Elouahabi", ref: "4CAY", card: "7922", s: "27/07 11:00" },
+  { n: "William Vitali", ref: "5DSB", card: "1622", s: "01/08 11:00" },
+];
+const SENT = { n: "Pons + Parrat", ref: "L5JU + Z3O3", card: "1025", s: "11/08 09:30" };
+const AUTO_SURE = [
+  { n: "Rami ALLAM", ref: "7JXP", card: "2795", s: "01/08 12:30" },
+  { n: "Dautrement", ref: "DJEW", card: "4147", s: "14/07 (passée)" },
+];
 
 // "2026-06-21" -> "21/06/2026"
 function fmtDate(d) {
@@ -64,6 +66,7 @@ export default function Dashboard() {
   const [propSlot, setPropSlot] = useState("");
   const [propMsg, setPropMsg] = useState("");
   const [verifQ, setVerifQ] = useState("");
+  const [deposits, setDeposits] = useState(null);
 
   const load = useCallback(async () => {
     const r = await fetch("/api/reservations", { cache: "no-store" });
@@ -75,6 +78,17 @@ export default function Dashboard() {
     const t = setInterval(load, 30000); // rafraîchit toutes les 30 s
     return () => clearInterval(t);
   }, [load]);
+
+  // Charge les acomptes SumUp (vérificateur par 4 chiffres) une fois connecté.
+  useEffect(() => {
+    if (!data?.authed) return;
+    fetch("/api/deposits", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j && j.ok) setDeposits(j.deposits);
+      })
+      .catch(() => {});
+  }, [data?.authed]);
 
   async function login(e) {
     e.preventDefault();
@@ -480,23 +494,20 @@ export default function Dashboard() {
 
       {authed &&
         (() => {
-          const todo = Object.entries(CARD_ATTRIB)
-            .filter(([, a]) => !a.ok && !a.s.includes("passée"))
-            .map(([card, a]) => {
-              const resa = reservations.find((x) => x.ref && x.ref.endsWith(a.r));
-              return { card, a, paid: resa ? resa.paid : false };
-            })
-            .filter((t) => !t.paid);
+          const toDo = TO_VERIFY.filter((v) => {
+            const resa = reservations.find((x) => x.ref && x.ref.endsWith(v.ref));
+            return !(resa && resa.paid);
+          });
+          const count = toDo.length + 1; // + Pons/Parrat (reçu envoyé, à re-vérifier)
+          const found = deposits ? deposits.filter((d) => d.card === verifQ) : null;
           return (
             <details className="section" style={{ border: "1px solid #e5d9c2", background: "#fffdf8", borderRadius: 10, padding: "10px 14px" }}>
               <summary style={{ cursor: "pointer", fontWeight: 700 }}>
-                {todo.length
-                  ? `🔎 Acomptes à vérifier — il en reste ${todo.length}`
-                  : "✓ Acomptes de l'ancien lien : tous vérifiés"}
+                🔎 Vérificateur de paiement — {count} acompte{count > 1 ? "s" : ""} à confirmer
               </summary>
               <div style={{ marginTop: 10 }}>
                 <p className="muted" style={{ margin: "0 0 8px" }}>
-                  Le client donne les 4 derniers chiffres de sa carte → son acompte s'affiche. Sinon, pas payé en ligne.
+                  Petit vérificateur rapide, sans ouvrir SumUp : le client donne les 4 derniers chiffres de sa carte → on confirme s'il a payé un acompte. (Il dit son nom lui-même.)
                 </p>
                 <input
                   inputMode="numeric"
@@ -507,44 +518,44 @@ export default function Dashboard() {
                   style={{ fontSize: 20, padding: "8px 12px", letterSpacing: ".22em", width: 130, fontFamily: "monospace", borderRadius: 8, border: "1px solid #ccd" }}
                 />
                 {verifQ.length === 4 &&
-                  (() => {
-                    const a = CARD_ATTRIB[verifQ];
-                    if (!a)
-                      return (
-                        <div style={{ marginTop: 10, background: "#f8e4e1", color: "#B5352A", borderRadius: 8, padding: "10px 12px", fontWeight: 600 }}>
-                          Aucun acompte en ligne avec cette carte → à encaisser sur place.
-                        </div>
-                      );
-                    const bg = a.ok ? "#e4f4ec" : "#f8eedd";
-                    const fg = a.ok ? "#157F4B" : "#9A6410";
-                    return (
-                      <div style={{ marginTop: 10, background: bg, color: fg, borderRadius: 8, padding: "10px 12px" }}>
-                        <b>
-                          {a.ok ? "✓ " : "Probablement "}
-                          {a.n}
-                        </b>{" "}
-                        — réf <b>{a.r}</b> — séance {a.s}
-                        <div style={{ fontSize: 12, opacity: 0.85 }}>{a.note}</div>
-                        {a.sent && (
-                          <div style={{ marginTop: 4 }}>Reçu déjà envoyé — re-vérifie juste la carte, ne redis rien au client.</div>
-                        )}
-                        {!a.ok && !a.sent && (
-                          <div style={{ marginTop: 4 }}>
-                            <b>Si le client confirme : coche « payé » sur {a.r}.</b>
-                          </div>
-                        )}
+                  (deposits === null ? (
+                    <div style={{ marginTop: 10, color: "#5B6B6E" }}>Lecture des paiements…</div>
+                  ) : found && found.length ? (
+                    <div style={{ marginTop: 10, background: "#e4f4ec", color: "#157F4B", borderRadius: 8, padding: "10px 12px" }}>
+                      <b>✓ Acompte de 50 € payé avec cette carte</b>
+                      {found.map((d, i) => (
+                        <div key={i} style={{ fontSize: 13 }}>le {fmtReceived(d.date)}</div>
+                      ))}
+                      <div style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>
+                        Demande son nom, trouve sa réservation, coche « payé ».
                       </div>
-                    );
-                  })()}
-                {todo.length > 0 && (
-                  <div style={{ marginTop: 12, borderTop: "1px solid #eee", paddingTop: 6 }}>
-                    {todo.map((t) => (
-                      <div key={t.card} style={{ fontSize: 13, padding: "5px 0", borderTop: "1px solid #f2ead9" }}>
-                        <b>{t.a.n}</b> · carte ••{t.card} · réf {t.a.r} · séance {t.a.s}
-                      </div>
-                    ))}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 10, background: "#f8e4e1", color: "#B5352A", borderRadius: 8, padding: "10px 12px", fontWeight: 600 }}>
+                      Aucun acompte de 50 € en ligne avec cette carte → pas payé en ligne (à encaisser sur place).
+                    </div>
+                  ))}
+
+                <div style={{ marginTop: 12, borderTop: "1px solid #eee", paddingTop: 8 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>À confirmer (séances à venir) :</div>
+                  {toDo.map((v) => (
+                    <div key={v.ref} style={{ fontSize: 13, padding: "4px 0", borderTop: "1px solid #f2ead9" }}>
+                      <b>{v.n}</b> · carte ••{v.card} · réf {v.ref} · séance {v.s}
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 13, padding: "4px 0", borderTop: "1px solid #f2ead9", color: "#9A6410" }}>
+                    <b>{SENT.n}</b> · carte ••{SENT.card} · réf {SENT.ref} · séance {SENT.s} — reçu déjà envoyé, à re-vérifier sans rien redire.
                   </div>
-                )}
+                </div>
+
+                <div style={{ marginTop: 10, borderTop: "1px solid #eee", paddingTop: 8 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4, color: "#157F4B" }}>Déjà sûrs (rattachés automatiquement) :</div>
+                  {AUTO_SURE.map((v) => (
+                    <div key={v.ref} style={{ fontSize: 13, padding: "3px 0", color: "#157F4B" }}>
+                      ✓ <b>{v.n}</b> · carte ••{v.card} · réf {v.ref} · séance {v.s}
+                    </div>
+                  ))}
+                </div>
               </div>
             </details>
           );
