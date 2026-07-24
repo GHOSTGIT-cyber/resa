@@ -20,18 +20,12 @@ const TEMPLATES = [
 // outil ne sert plus (désormais tout acompte se rattache automatiquement).
 const CARD_ATTRIB = {
   "1025": { n: "Pons + Parrat", r: "L5JU + Z3O3", s: "11/08 09:30", ok: true, note: "2 places même séance, même carte. Déjà payés." },
-  "8331": { n: "Julie RODIER", r: "9LBW", s: "14/07 08:00 (passée)", ok: true, note: "Acompte + solde 35 € au terminal, même carte." },
-  "3047": { n: "Thomas MAURE", r: "PTBL", s: "12/07 11:00 (passée)", note: "Résa créée 2h30 avant le paiement." },
-  "1002": { n: "LIZAN GERARD", r: "96BZ", s: "01/08 11:00", note: "Créée 2h39 avant, même jour." },
+  "1002": { n: "LIZAN GERARD", r: "96BZ", s: "01/08 11:00", note: "Créée 2h39 avant le paiement, même jour." },
   "6161": { n: "Guillaume Maurin", r: "UJEC", s: "04/08 09:30", note: "Seule résa créée le jour du paiement." },
-  "0140": { n: "Dubois lukas", r: "SWUC", s: "15/07 11:00 (passée)", note: "Créée 4h avant." },
   "0770": { n: "Cegarra Alec", r: "K4WO", s: "28/07 09:30", note: "Ou SAHORES / Instituto / Mark Stroh — la carte tranche." },
   "7922": { n: "chaimaa Elouahabi", r: "4CAY", s: "27/07 11:00", note: "Résa « en attente » → à confirmer." },
-  "5474": { n: "romain druenne", r: "CG1C", s: "11/07 09:30 (passée)", note: "Couple ambigu du 06/07." },
   "1622": { n: "William Vitali", r: "5DSB", s: "01/08 11:00", note: "Repli, incertain." },
-  "2795": { n: "Rami ALLAM", r: "7JXP", s: "01/08 12:30", ok: true, note: "Payé automatiquement." },
-  "4147": { n: "Dautrement", r: "DJEW", s: "14/07 11:00 (passée)", ok: true, note: "Payé automatiquement." },
-  "1209": { n: "Bjorn Christiaens", r: "URFL", s: "23/07 11:00 (passée)", ok: true, note: "Déjà coché." },
+  "2795": { n: "Rami ALLAM", r: "7JXP", s: "01/08 12:30", ok: true, note: "Payé automatiquement (le système marche)." },
 };
 
 // "2026-06-21" -> "21/06/2026"
