@@ -484,75 +484,76 @@ export default function Dashboard() {
         <span className="badge">{authed ? "Accès complet" : "Vue publique"}</span>
       </header>
 
-      {authed && (
-        <div className="section">
-          <h2>🔎 Vérifier un acompte (4 chiffres de carte)</h2>
-          <p className="muted" style={{ margin: "2px 0 8px" }}>
-            Le client donne les 4 derniers chiffres de sa carte → sa réservation s'affiche. Sinon, il n'a pas payé en ligne.
-          </p>
-          <input
-            inputMode="numeric"
-            maxLength={4}
-            placeholder="4 chiffres"
-            value={verifQ}
-            onChange={(e) => setVerifQ(e.target.value.replace(/\D/g, "").slice(0, 4))}
-            style={{ fontSize: 20, padding: "8px 12px", letterSpacing: ".22em", width: 130, fontFamily: "monospace", borderRadius: 8, border: "1px solid #ccd" }}
-          />
-          {verifQ.length === 4 &&
-            (() => {
-              const a = CARD_ATTRIB[verifQ];
-              if (!a)
-                return (
-                  <div style={{ marginTop: 10, background: "#f8e4e1", color: "#B5352A", borderRadius: 8, padding: "10px 12px", fontWeight: 600 }}>
-                    Aucun acompte en ligne avec cette carte → à encaisser sur place.
-                  </div>
-                );
-              return (
-                <div style={{ marginTop: 10, background: a.ok ? "#e4f4ec" : "#f8eedd", color: a.ok ? "#157F4B" : "#9A6410", borderRadius: 8, padding: "10px 12px" }}>
-                  <b>
-                    {a.ok ? "✓ " : "Probablement "}
-                    {a.n}
-                  </b>{" "}
-                  — réf <b>{a.r}</b> — séance {a.s}
-                  <div style={{ fontSize: 12, opacity: 0.85 }}>{a.note}</div>
-                  {!a.ok && (
-                    <div style={{ marginTop: 4 }}>
-                      <b>Si le client confirme : coche « payé » sur {a.r}.</b>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-        </div>
-      )}
-
       {authed &&
         (() => {
           const todo = Object.entries(CARD_ATTRIB)
-            .filter(([, a]) => !a.ok)
+            .filter(([, a]) => !a.ok && !a.s.includes("passée"))
             .map(([card, a]) => {
               const resa = reservations.find((x) => x.ref && x.ref.endsWith(a.r));
               return { card, a, paid: resa ? resa.paid : false };
             })
             .filter((t) => !t.paid);
-          if (!todo.length)
-            return (
-              <div className="section" style={{ background: "#e4f4ec", color: "#157F4B", borderRadius: 10, padding: "12px 14px", fontWeight: 600 }}>
-                ✓ Tous les acomptes de l'ancien lien sont vérifiés — l'outil au-dessus ne sert plus.
-              </div>
-            );
           return (
-            <div className="section" style={{ border: "1px solid #f3c78a", background: "#fff8ef", borderRadius: 10, padding: "12px 14px" }}>
-              <h2 style={{ marginTop: 0 }}>⏳ Acomptes à vérifier — il en reste {todo.length}</h2>
-              <p className="muted" style={{ margin: "0 0 8px" }}>
-                Payés via l'ancien lien, à solder une seule fois. Ensuite, tout se rattache automatiquement.
-              </p>
-              {todo.map((t) => (
-                <div key={t.card} style={{ fontSize: 13, padding: "5px 0", borderTop: "1px solid #f0e0c8" }}>
-                  <b>{t.a.n}</b> · carte ••{t.card} · réf {t.a.r} · séance {t.a.s}
-                </div>
-              ))}
-            </div>
+            <details className="section" style={{ border: "1px solid #e5d9c2", background: "#fffdf8", borderRadius: 10, padding: "10px 14px" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 700 }}>
+                {todo.length
+                  ? `🔎 Acomptes à vérifier — il en reste ${todo.length}`
+                  : "✓ Acomptes de l'ancien lien : tous vérifiés"}
+              </summary>
+              <div style={{ marginTop: 10 }}>
+                <p className="muted" style={{ margin: "0 0 8px" }}>
+                  Le client donne les 4 derniers chiffres de sa carte → son acompte s'affiche. Sinon, pas payé en ligne.
+                </p>
+                <input
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="4 chiffres"
+                  value={verifQ}
+                  onChange={(e) => setVerifQ(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  style={{ fontSize: 20, padding: "8px 12px", letterSpacing: ".22em", width: 130, fontFamily: "monospace", borderRadius: 8, border: "1px solid #ccd" }}
+                />
+                {verifQ.length === 4 &&
+                  (() => {
+                    const a = CARD_ATTRIB[verifQ];
+                    if (!a)
+                      return (
+                        <div style={{ marginTop: 10, background: "#f8e4e1", color: "#B5352A", borderRadius: 8, padding: "10px 12px", fontWeight: 600 }}>
+                          Aucun acompte en ligne avec cette carte → à encaisser sur place.
+                        </div>
+                      );
+                    const past = a.s.includes("passée");
+                    const bg = a.ok ? "#e4f4ec" : past ? "#eef2f2" : "#f8eedd";
+                    const fg = a.ok ? "#157F4B" : past ? "#5B6B6E" : "#9A6410";
+                    return (
+                      <div style={{ marginTop: 10, background: bg, color: fg, borderRadius: 8, padding: "10px 12px" }}>
+                        <b>
+                          {a.ok ? "✓ " : "Probablement "}
+                          {a.n}
+                        </b>{" "}
+                        — réf <b>{a.r}</b> — séance {a.s}
+                        <div style={{ fontSize: 12, opacity: 0.85 }}>{a.note}</div>
+                        {!a.ok && past && (
+                          <div style={{ marginTop: 4 }}>Séance déjà passée — client déjà venu. À cocher « payé » sur {a.r} juste pour la compta.</div>
+                        )}
+                        {!a.ok && !past && (
+                          <div style={{ marginTop: 4 }}>
+                            <b>Si le client confirme : coche « payé » sur {a.r}.</b>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                {todo.length > 0 && (
+                  <div style={{ marginTop: 12, borderTop: "1px solid #eee", paddingTop: 6 }}>
+                    {todo.map((t) => (
+                      <div key={t.card} style={{ fontSize: 13, padding: "5px 0", borderTop: "1px solid #f2ead9" }}>
+                        <b>{t.a.n}</b> · carte ••{t.card} · réf {t.a.r} · séance {t.a.s}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </details>
           );
         })()}
 
