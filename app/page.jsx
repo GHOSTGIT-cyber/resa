@@ -19,7 +19,7 @@ const TEMPLATES = [
 // chiffres de carte -> on retrouve sa réservation. Une fois ces résa cochées « payé », cet
 // outil ne sert plus (désormais tout acompte se rattache automatiquement).
 const CARD_ATTRIB = {
-  "1025": { n: "Pons + Parrat", r: "L5JU + Z3O3", s: "11/08 09:30", ok: true, note: "2 places même séance, même carte. Déjà payés." },
+  "1025": { n: "Pons + Parrat", r: "L5JU + Z3O3", s: "11/08 09:30", sent: true, note: "Reçu déjà envoyé (carte ••1025 × 2 places). À re-vérifier par la carte quand possible, sans rien redire au client." },
   "1002": { n: "LIZAN GERARD", r: "96BZ", s: "01/08 11:00", note: "Créée 2h39 avant le paiement, même jour." },
   "6161": { n: "Guillaume Maurin", r: "UJEC", s: "04/08 09:30", note: "Seule résa créée le jour du paiement." },
   "0770": { n: "Cegarra Alec", r: "K4WO", s: "28/07 09:30", note: "Ou SAHORES / Instituto / Mark Stroh — la carte tranche." },
@@ -515,9 +515,8 @@ export default function Dashboard() {
                           Aucun acompte en ligne avec cette carte → à encaisser sur place.
                         </div>
                       );
-                    const past = a.s.includes("passée");
-                    const bg = a.ok ? "#e4f4ec" : past ? "#eef2f2" : "#f8eedd";
-                    const fg = a.ok ? "#157F4B" : past ? "#5B6B6E" : "#9A6410";
+                    const bg = a.ok ? "#e4f4ec" : "#f8eedd";
+                    const fg = a.ok ? "#157F4B" : "#9A6410";
                     return (
                       <div style={{ marginTop: 10, background: bg, color: fg, borderRadius: 8, padding: "10px 12px" }}>
                         <b>
@@ -526,10 +525,10 @@ export default function Dashboard() {
                         </b>{" "}
                         — réf <b>{a.r}</b> — séance {a.s}
                         <div style={{ fontSize: 12, opacity: 0.85 }}>{a.note}</div>
-                        {!a.ok && past && (
-                          <div style={{ marginTop: 4 }}>Séance déjà passée — client déjà venu. À cocher « payé » sur {a.r} juste pour la compta.</div>
+                        {a.sent && (
+                          <div style={{ marginTop: 4 }}>Reçu déjà envoyé — re-vérifie juste la carte, ne redis rien au client.</div>
                         )}
-                        {!a.ok && !past && (
+                        {!a.ok && !a.sent && (
                           <div style={{ marginTop: 4 }}>
                             <b>Si le client confirme : coche « payé » sur {a.r}.</b>
                           </div>

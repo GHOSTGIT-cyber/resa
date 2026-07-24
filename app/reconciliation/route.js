@@ -186,6 +186,16 @@ export async function GET() {
     `<div class="card"><input id="rq" inputmode="numeric" maxlength="4" placeholder="4 chiffres" autocomplete="off" style="font-size:22px;padding:10px 14px;border:1px solid #D7E1E2;border-radius:8px;width:150px;letter-spacing:.25em;font-family:monospace;"><div id="rr" style="margin-top:12px;"></div></div>` +
     `<script>(function(){var A=${JSON.stringify(ATTRIB)};var q=document.getElementById('rq'),r=document.getElementById('rr');if(!q)return;function e(s){return String(s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}q.addEventListener('input',function(){var v=q.value.replace(/\\D/g,'').slice(0,4);q.value=v;if(v.length<4){r.innerHTML='';return;}var a=A[v];if(!a){r.innerHTML='<div style="background:#f8e4e1;color:#B5352A;border-radius:8px;padding:12px 14px;font-weight:600;">Carte inconnue — aucun acompte de 50 EUR en ligne avec cette carte. A encaisser sur place.</div>';return;}var done=a.k==='ok';var bg=done?'#e4f4ec':'#f8eedd',fg=done?'#157F4B':'#9A6410';var head=done?('OK — '+e(a.n)):('Probablement '+e(a.n));var extra=done?'':'<br><b>Si le client confirme : coche « paye » sur la ref '+e(a.r)+'.</b>';r.innerHTML='<div style="background:'+bg+';color:'+fg+';border-radius:8px;padding:12px 14px;"><b>'+head+'</b> — ref <b>'+e(a.r)+'</b> — seance '+e(a.s)+'<br><span style="font-size:12px;opacity:.85;">'+e(a.note)+'</span>'+extra+'</div>';});})();</script>`;
 
+  // --- Explication / preuve du travail (reprise de la note recoupage) ---
+  body +=
+    `<details style="margin:10px 0;"><summary style="cursor:pointer;font-weight:bold;color:#5B6B6E;">📄 Explication — comment on en est arrivé là</summary>` +
+    `<div class="card" style="margin-top:8px;line-height:1.55;">` +
+    `<p><b>Le problème :</b> des acomptes de 50 € payés en ligne étaient bien encaissés sur SumUp, mais pas rattachés automatiquement à leur réservation.</p>` +
+    `<p><b>Chronologie :</b> début juillet, un lien de secours servait le temps d'activer le paiement automatique. Le <b>16/07 à 18:06</b>, premier acompte rattaché tout seul (Dautrement) → l'automatique fonctionne. Pendant la transition, quelques paiements sont encore passés par le lien de secours (la page retombait dessus). Le <b>23/07</b>, le lien de secours a été retiré.</p>` +
+    `<p><b>Aujourd'hui :</b> tout acompte payé par le lien unique se rattache et se coche « payé » automatiquement (testé de bout en bout, sans crash). Il reste à solder à la main ceux passés par l'ancien lien → d'où la recherche par 4 chiffres ci-dessus.</p>` +
+    `<p class="muted"><b>Méthode d'attribution :</b> élimination (le paiement est postérieur à la création de la réservation) + proximité création→paiement + trace d'une même carte (2 acomptes, ou acompte + solde au terminal). Les cas sans preuve carte sont « à confirmer » et validés par les 4 chiffres cités par le client.</p>` +
+    `</div></details>`;
+
   if (!tx.ok) {
     body += `<div class="card ko">Impossible de lire les transactions SumUp : ${esc(tx.error)}</div>`;
     return html(body);
